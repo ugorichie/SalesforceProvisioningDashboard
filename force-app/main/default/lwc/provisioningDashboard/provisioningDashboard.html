@@ -41,7 +41,7 @@
 
 
             <!-- Card 2: Approval Growth % -->
-            <div class="dashboard-card-dark">
+            <!-- <div class="dashboard-card-dark">
                 <template if:false={card2Error}>
 
                     <div class="card-title">Approval Growth %</div>
@@ -56,24 +56,20 @@
                 <template if:true={card2Error}>
                     <div class="error-state-dark">Failed to load Approval Growth data.</div>
                 </template>
-            </div>
+            </div> -->
 
 
             <!-- Card 3: Provisioning Completed -->
             <div class="dashboard-card-dark">
                 <template if:false={cardError}>
-                    <div class="card-step-header">
-                        <span class="step-circle">3</span>
-                    </div>
-
-                    <div class="card-section top-section">
+                     <div class="card-section top-section">
                         <div class="card-title">Provisioning Completed</div>
                         <div class="card-value">{provisioningValue}</div>
                         <div class="trend-container">
                             <span class="trend-arrow">▲</span>
                             <span class="trend-percentage">{provisioningTrend}</span>
                         </div>
-                        <div class="trend-period-text">vs Last Month</div>
+                        <div class="trend-period-text">vs Last Period</div>
                     </div>
 
                     <hr class="card-divider" />
@@ -85,7 +81,7 @@
                             <span class="trend-arrow">▲</span>
                             <span class="trend-percentage">{netMrrTrend}</span>
                         </div>
-                        <div class="trend-period-text">vs Last Month</div>
+                        <div class="trend-period-text">vs Last Period</div>
                     </div>
                 </template>
 
