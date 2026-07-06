@@ -1,0 +1,210 @@
+<template>
+    <div class="dashboard-main-container">
+        <!-- Main Dashboard Header -->
+        <h1 class="dashboard-main-title">Provisioning intelligence dashboard</h1>
+
+        <!-- Cards Layout Wrapper -->
+        <div class="filter-row-container">
+            <lightning-combobox name="dateFilter" label="Time Period" value={selectedFilter}
+                placeholder="Select time period" options={filterOptions} onchange={handleFilterChange}
+                variant="label-hidden" class="dashboard-top-dropdown">
+            </lightning-combobox>
+
+            <template if:true={isCustomDate}>
+                <div class="custom-range-inline">
+                    <lightning-input type="date" label="Start" value={startDate} onchange={handleStartDateChange}
+                        variant="label-hidden" class="slds-m-right_x-small"></lightning-input>
+                    <lightning-input type="date" label="End" value={endDate} onchange={handleEndDateChange}
+                        variant="label-hidden"></lightning-input>
+                </div>
+            </template>
+        </div>
+
+        <!-- Card 1: Total Approvals -->
+        <div class="dashboard-grid">
+            <div class="dashboard-card-dark">
+                <template if:false={card1Error}>
+
+                    <div class="card-title">Total Approvals</div>
+                    <div class="card-subtitle-lbl">(MRC)</div>
+                    <div class="card-value">{formattedAmount}</div>
+                    <div class="trend-container">
+                        <span class="trend-arrow">▲</span>
+                        <span class="trend-percentage">{percentageGrowth}%</span>
+                    </div>
+                    <div class="trend-period-text">vs Last Period</div>
+                </template>
+                <template if:true={card1Error}>
+                    <div class="error-state-dark">Failed to load Approvals data.</div>
+                </template>
+            </div>
+
+
+            <!-- Card 2: Approval Growth % -->
+            <div class="dashboard-card-dark">
+                <template if:false={card2Error}>
+
+                    <div class="card-title">Approval Growth %</div>
+                    <div class="card-subtitle-lbl">&nbsp;</div>
+                    <div class="card-value">{card2Value}</div>
+                    <div class="trend-container">
+                        <span class="trend-arrow">▲</span>
+                        <span class="trend-percentage">{card2Trend}</span>
+                    </div>
+                    <div class="trend-period-text">vs Last Period</div>
+                </template>
+                <template if:true={card2Error}>
+                    <div class="error-state-dark">Failed to load Approval Growth data.</div>
+                </template>
+            </div>
+
+
+            <!-- Card 3: Provisioning Completed -->
+            <div class="dashboard-card-dark">
+                <template if:false={cardError}>
+                    <div class="card-step-header">
+                        <span class="step-circle">3</span>
+                    </div>
+
+                    <div class="card-section top-section">
+                        <div class="card-title">Provisioning Completed</div>
+                        <div class="card-value">{provisioningValue}</div>
+                        <div class="trend-container">
+                            <span class="trend-arrow">▲</span>
+                            <span class="trend-percentage">{provisioningTrend}</span>
+                        </div>
+                        <div class="trend-period-text">vs Last Month</div>
+                    </div>
+
+                    <hr class="card-divider" />
+
+                    <div class="card-section bottom-section">
+                        <div class="card-title">Net MRR</div>
+                        <div class="card-value">{netMrrValue}</div>
+                        <div class="trend-container">
+                            <span class="trend-arrow">▲</span>
+                            <span class="trend-percentage">{netMrrTrend}</span>
+                        </div>
+                        <div class="trend-period-text">vs Last Month</div>
+                    </div>
+                </template>
+
+                <template if:true={cardError}>
+                    <div class="error-state-dark">Failed to load dashboard data.</div>
+                </template>
+            </div>
+
+
+            <!-- Card 4: Provisioning Completed Growth % -->
+            <div class="dashboard-card-dark">
+                <template if:false={card2Error}>
+
+                    <div class="card-title">Provisioning Completed Growth (%)</div>
+                    <div class="card-subtitle-lbl">&nbsp;</div>
+                    <div class="card-value">{card2Value}</div>
+                    <div class="trend-container">
+                        <span class="trend-arrow">▲</span>
+                        <span class="trend-percentage">{card2Trend}</span>
+                    </div>
+                    <div class="trend-period-text">vs Last Period</div>
+                </template>
+                <template if:true={card2Error}>
+                    <div class="error-state-dark">Failed to load Provisioning Completed Growth data.</div>
+                </template>
+            </div>
+
+            <!-- Card 5: Provisioning Backlogs % -->
+            <div class="dashboard-card-dark">
+                <template if:false={card2Error}>
+
+                    <div class="card-title">Provisioning Backlogs (%)</div>
+                    <div class="card-subtitle-lbl">&nbsp;</div>
+                    <div class="card-value">{card2Value}</div>
+                    <div class="trend-container">
+                        <span class="trend-arrow">▲</span>
+                        <span class="trend-percentage">{card2Trend}</span>
+                    </div>
+                    <div class="trend-period-text">vs Last Period</div>
+                </template>
+                <template if:true={card2Error}>
+                    <div class="error-state-dark">Failed to load Provisioning Backlogs % data.</div>
+                </template>
+            </div>
+
+            <!-- Card 6: Provisioning Backlogs -->
+            <div class="dashboard-card-dark">
+                <template if:false={card2Error}>
+
+                    <div class="card-title">Provisioning Backlogs </div>
+                    <div class="card-subtitle-lbl">&nbsp;</div>
+                    <div class="card-value">{card2Value}</div>
+                    <div class="trend-container">
+                        <span class="trend-arrow">▲</span>
+                        <span class="trend-percentage">{card2Trend}</span>
+                    </div>
+                    <div class="trend-period-text">vs Last Period</div>
+                </template>
+                <template if:true={card2Error}>
+                    <div class="error-state-dark">Failed to load Provisioning Backlogs data.</div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Monthly Net MRC Trend Analysis Block (Completely detached from card filters) -->
+        <div class="trend-chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">Monthly Net MRC Trend Analysis</h2>
+            </div>
+
+            <template if:false={chartError}>
+                <div class="chart-body">
+                    <svg viewBox="0 0 760 200" class="trend-svg">
+                        <!-- Dynamic Y-Axis Labels -->
+                        <text x="10" y="44" class="axis-label-y">{yLabelMax}</text>
+                        <text x="10" y="81" class="axis-label-y">{yLabelMidHigh}</text>
+                        <text x="10" y="118" class="axis-label-y">{yLabelMid}</text>
+                        <text x="10" y="154" class="axis-label-y">{yLabelMidLow}</text>
+                        <text x="10" y="190" class="axis-label-y">{yLabelMin}</text>
+
+                        <!-- Horizontal Grid Lines -->
+                        <line x1="60" y1="40" x2="760" y2="40" stroke="#f0f0f0" stroke-width="1"
+                            stroke-dasharray="4,4" />
+                        <line x1="60" y1="77" x2="760" y2="77" stroke="#f0f0f0" stroke-width="1"
+                            stroke-dasharray="4,4" />
+                        <line x1="60" y1="114" x2="760" y2="114" stroke="#f0f0f0" stroke-width="1"
+                            stroke-dasharray="4,4" />
+                        <line x1="60" y1="150" x2="760" y2="150" stroke="#f0f0f0" stroke-width="1"
+                            stroke-dasharray="4,4" />
+                        <line x1="60" y1="190" x2="760" y2="190" stroke="#edf2f7" stroke-width="1" />
+
+                        <!-- Smooth Trend Line Curve -->
+                        <path d={chartPathData} fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"
+                            stroke-linejoin="round" />
+
+                        <!-- Interactive Data Marker Dots -->
+                        <template for:each={chartDataPoints} for:item="pt">
+                            <circle key={pt.month} cx={pt.x} cy={pt.y} r="4" fill="#3b82f6" stroke="#ffffff"
+                                stroke-width="2" />
+                        </template>
+                    </svg>
+
+                    <!-- Dynamic X-Axis Container -->
+                    <div class="chart-axis-x">
+                        <template for:each={chartMonths} for:item="m">
+                            <span key={m}>{m}</span>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={chartError}>
+                <div class="chart-error-state">
+                    <lightning-icon icon-name="utility:warning" size="small" variant="error"
+                        class="slds-m-right_x-small"></lightning-icon>
+                    <span>Trend analysis visualization is temporarily unavailable.</span>
+                </div>
+            </template>
+        </div>
+
+    </div>
+</template>
