@@ -23,7 +23,7 @@
         <!-- Card 1: Total Approvals -->
         <div class="dashboard-grid">
             <div class="dashboard-card-dark">
-                <template if:false={card1Error}>
+                <template if:false={TotalApprovalcardError}>
 
                     <div class="card-title">Total Approvals</div>
                     <div class="card-subtitle-lbl">(MRC)</div>
@@ -32,9 +32,9 @@
                         <span class="trend-arrow">▲</span>
                         <span class="trend-percentage">{percentageGrowth}%</span>
                     </div>
-                    <div class="trend-period-text">vs Last Period</div>
+                    <div class="trend-period-text">{lastPeriod}</div>
                 </template>
-                <template if:true={card1Error}>
+                <template if:true={TotalApprovalcardError}>
                     <div class="error-state-dark">Failed to load Approvals data.</div>
                 </template>
             </div>
@@ -42,7 +42,7 @@
 
             <!-- Card 2: Approval Growth % -->
             <div class="dashboard-card-dark">
-                <template if:false={card2Error}>
+                <template if:false={ApprovalGrowthcardError}>
 
                     <div class="card-title">Approval Growth %</div>
                     <div class="card-subtitle-lbl">&nbsp;</div>
@@ -51,9 +51,9 @@
                         <span class="trend-arrow">▲</span>
                         <span class="trend-percentage">{card2Trend}</span>
                     </div>
-                    <div class="trend-period-text">vs Last Period</div>
+                    <div class="trend-period-text">{lastPeriod}</div>
                 </template>
-                <template if:true={card2Error}>
+                <template if:true={ApprovalGrowthcardError}>
                     <div class="error-state-dark">Failed to load Approval Growth data.</div>
                 </template>
             </div>
@@ -61,39 +61,39 @@
 
             <!-- Card 3: Provisioning Completed -->
             <div class="dashboard-card-dark">
-                <template if:false={cardError}>
+                <template if:false={ProvisioningCompletedcard3Error}>
                      <div class="card-section top-section">
                         <div class="card-title">Provisioning Completed</div>
-                        <div class="card-value">{provisioningValue}</div>
+                        <div class="card-value">{provisioningCompletedValue}</div>
                         <div class="trend-container">
                             <span class="trend-arrow">▲</span>
                             <span class="trend-percentage">{provisioningTrend}</span>
                         </div>
-                        <div class="trend-period-text">vs Last Period</div>
+                        <div class="trend-period-text"> {lastPeriod}</div>
                     </div>
 
                     <hr class="card-divider" />
 
                     <div class="card-section bottom-section">
                         <div class="card-title">Net MRR</div>
-                        <div class="card-value">{netMrrValue}</div>
+                        <div class="card-value">{ProvisioningCompletedMRC}</div>
                         <div class="trend-container">
                             <span class="trend-arrow">▲</span>
-                            <span class="trend-percentage">{netMrrTrend}</span>
+                            <span class="trend-percentage">{netMrcTrend}</span>
                         </div>
-                        <div class="trend-period-text">vs Last Period</div>
+                        <div class="trend-period-text"> {lastPeriod}</div>
                     </div>
                 </template>
 
-                <template if:true={cardError}>
-                    <div class="error-state-dark">Failed to load dashboard data.</div>
+                <template if:true={ProvisioningCompletedcard3Error}>
+                    <div class="error-state-dark">Failed to load Provisioning Completed data.</div>
                 </template>
             </div>
 
 
             <!-- Card 4: Provisioning Completed Growth % -->
             <div class="dashboard-card-dark">
-                <template if:false={card2Error}>
+                <template if:false={ProvisioningCompletedGrowthcard4Error}>
 
                     <div class="card-title">Provisioning Completed Growth (%)</div>
                     <div class="card-subtitle-lbl">&nbsp;</div>
@@ -102,16 +102,16 @@
                         <span class="trend-arrow">▲</span>
                         <span class="trend-percentage">{card2Trend}</span>
                     </div>
-                    <div class="trend-period-text">vs Last Period</div>
+                    <div class="trend-period-text">{lastPeriod}</div>
                 </template>
-                <template if:true={card2Error}>
+                <template if:true={ProvisioningCompletedGrowthcard4Error}>
                     <div class="error-state-dark">Failed to load Provisioning Completed Growth data.</div>
                 </template>
             </div>
 
             <!-- Card 5: Provisioning Backlogs % -->
             <div class="dashboard-card-dark">
-                <template if:false={card2Error}>
+                <template if:false={ProvisioningBacklogscard5Error}>
 
                     <div class="card-title">Provisioning Backlogs (%)</div>
                     <div class="card-subtitle-lbl">&nbsp;</div>
@@ -120,16 +120,16 @@
                         <span class="trend-arrow">▲</span>
                         <span class="trend-percentage">{card2Trend}</span>
                     </div>
-                    <div class="trend-period-text">vs Last Period</div>
+                    <div class="trend-period-text">{lastPeriod}</div>
                 </template>
-                <template if:true={card2Error}>
+                <template if:true={ProvisioningBacklogscard5Error}>
                     <div class="error-state-dark">Failed to load Provisioning Backlogs % data.</div>
                 </template>
             </div>
 
             <!-- Card 6: Provisioning Backlogs -->
             <div class="dashboard-card-dark">
-                <template if:false={card2Error}>
+                <template if:false={ProvisioningBacklogscard6Error}>
 
                     <div class="card-title">Provisioning Backlogs </div>
                     <div class="card-subtitle-lbl">&nbsp;</div>
@@ -138,9 +138,9 @@
                         <span class="trend-arrow">▲</span>
                         <span class="trend-percentage">{card2Trend}</span>
                     </div>
-                    <div class="trend-period-text">vs Last Period</div>
+                    <div class="trend-period-text">{lastPeriod}</div>
                 </template>
-                <template if:true={card2Error}>
+                <template if:true={ProvisioningBacklogscard6Error}>
                     <div class="error-state-dark">Failed to load Provisioning Backlogs data.</div>
                 </template>
             </div>

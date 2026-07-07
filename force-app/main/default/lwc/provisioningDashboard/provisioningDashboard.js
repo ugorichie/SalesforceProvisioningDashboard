@@ -7,6 +7,12 @@ export default class ProvisioningDashboard extends LightningElement {
     @track percentageGrowth = '0.0';
     @track card2Value = '0%';
     @track card2Trend = '0.0%';
+    @track provisioningCompletedValue = 0;
+    @track provisioningTrend = '0.0%';
+    @track ProvisioningCompletedMRC = '$0.00';
+    @track netMrcTrend = '0.0%';
+    @track lastPeriod = ''; 
+
 
     @track selectedFilter = 'this_month'; 
     @track startDate = '';
@@ -28,8 +34,10 @@ export default class ProvisioningDashboard extends LightningElement {
     @track yLabelMin = '$1.8M';
 
     // Independent Error States
-    @track card1Error = false;
-    @track card2Error = false;
+    @track TotalApprovalcardError = false;
+    @track ApprovalGrowthcardError = false; 
+    @track ProvisioningCompletedcard3Error = false;
+    @track ProvisioningCompletedGrowthcard4Error = false;
     @track chartError = false;
 
     filterOptions = [
@@ -54,19 +62,21 @@ export default class ProvisioningDashboard extends LightningElement {
                 if (data.totalAmount !== undefined) {
                     this.percentageGrowth = data.percentageGrowth;
                     this.formattedAmount = this.formatToMillions(data.totalAmount);
-                    this.card1Error = false; 
+                    this.TotalApprovalcardError = false; 
+                     this.lastPeriod = data.timeframe;
                 } else {
                     throw new Error('Missing card 1 payload');
                 }
             } catch (err) {
                 console.error('Card 1 breakdown caught:', err);
-                this.card1Error = true;
+                this.TotalApprovalcardError = true;
             }
 
             // --- TRY CARD 2: APPROVAL GROWTH % (Filter-Responsive) ---
             try {
                 if (data.currentGrowthRate !== undefined) {
                     this.card2Value = `${data.currentGrowthRate}%`;
+                     this.lastPeriod = data.timeframe;
                     const currentRate = data.currentGrowthRate;
                     const previousRate = data.previousGrowthRate || 0;
                     
@@ -76,13 +86,45 @@ export default class ProvisioningDashboard extends LightningElement {
                     } else {
                         this.card2Trend = '0.0%';
                     }
-                    this.card2Error = false;
+                    this.ApprovalGrowthcardError = false;
                 } else {
                     throw new Error('Missing card 2 payload');
                 }
             } catch (err) {
                 console.error('Card 2 breakdown caught:', err);
-                this.card2Error = true;
+                this.ApprovalGrowthcardError = true;
+            }
+
+
+            // --- TRY CARD 3 Provisioninig Completed (Filter-Responsive) ---
+            try {
+                if (data.provisionedCompletedCount !== undefined) {
+                // Assigning values to the tracked properties for card 3
+                    this.provisioningCompletedValue = data.provisionedCompletedCount;
+                    this.ProvisioningCompletedMRC = this.formatToMillions(data.ProvisionedCompletedMRC);
+                    this.lastPeriod = data.timeframe;
+
+                    const ProvisionedCompletedPercentageCurrent = data.ProvisionedCompletedPercentageCurrent;
+                    const ProvisionedCompletedPercentagePrevious = data.ProvisionedCompletedPercentagePrevious;
+                    const ProvisionedCompletedMRCPercentageCurrent = data.ProvisionedCompletedMRCPercentageCurrent;
+                    const ProvisionedCompletedMRCPercentagePrevious = data.ProvisionedCompletedMRCPercentagePrevious;
+                    if (ProvisionedCompletedPercentagePrevious !== 0) {
+                        const trendProvisioningCalculation = ((ProvisionedCompletedPercentageCurrent - ProvisionedCompletedPercentagePrevious) / ProvisionedCompletedPercentagePrevious) * 100;
+                        this.provisioningTrend = `${Math.abs(trendProvisioningCalculation).toFixed(1)}%`;
+                        const trendMRCCalculation = ((ProvisionedCompletedMRCPercentageCurrent - ProvisionedCompletedMRCPercentagePrevious) / ProvisionedCompletedMRCPercentagePrevious) * 100;
+                        this.netMrcTrend = `${Math.abs(trendMRCCalculation).toFixed(1)}%`;
+                    } else {
+                        this.provisioningTrend = '0.0%';
+                        this.netMrcTrend = '0.0%';
+                    }
+                    this.ProvisioningCompletedcard3Error = false;
+
+                } else {
+                    throw new Error('Missing card 3 payload');
+                }
+            } catch (err) {
+                console.error('Card 3 breakdown caught:', err);
+                this.ProvisioningCompletedcard3Error = true;
             }
 
             // --- TRY CHART: MONTHLY TREND ANALYSIS (Static Jan-Jul Timeline, Filter Independent) ---
@@ -125,13 +167,17 @@ export default class ProvisioningDashboard extends LightningElement {
             }
 
         } else if (error) {
-            this.card1Error = true;
-            this.card2Error = true;
+            this.TotalApprovalcardError = true;
+            this.ApprovalGrowthcardError = true;
+            this.ProvisioningCompletedcard3Error = true;
+            // this.ProvisioningCompletedGrowthcard4Error = true;
+            // this.ProvisioningBacklogscard5Error = true;
+            // this.ProvisioningBacklogscard6Error = true;
             this.chartError = true;
             console.error('Apex connection level failure:', error);
         }
     }
-    
+
 
     // Event handler for filter selection changes
     handleFilterChange(event) {
