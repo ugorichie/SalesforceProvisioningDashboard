@@ -6,6 +6,7 @@ export default class ProvisioningDashboard extends LightningElement {
     // Card 1: Total Approvals Metrics
     @track formattedAmount = '$0.00';
     @track percentageGrowth = '0.0';
+    @track totalAmount = 0;
 
     // Card 2: Approval Growth Metrics
     @track card2Value = '0%';
@@ -23,6 +24,10 @@ export default class ProvisioningDashboard extends LightningElement {
    // @track ProvisioningCompletedGrowthTrend = '0.0%';
     @track ProvisioningCompletedGrowthCurrent = 0;
     @track ProvisioningCompletedGrowthPrevious = 0;
+
+    // Card 5: Provisioning Backlogs Metrics
+    @track provisioningInProgress = 0;
+    @track ProvisioningBacklogsPercent = '0.0%';
 
     // Filter and Date Range States
     @track selectedFilter = 'this_month'; 
@@ -159,6 +164,40 @@ export default class ProvisioningDashboard extends LightningElement {
                 this.ProvisioningCompletedGrowthcard4Error = true;
             }
 
+
+              // --- TRY CARD 5 Provisioning Backlogs  ---
+            try {
+    if (data.ProvisioningInProgress !== undefined) {
+        // Assigning values to the tracked properties for card 5
+        this.provisioningInProgress = data.ProvisioningInProgress;
+        this.totalAmount = data.totalAmount;
+        this.lastPeriod = data.timeframe;
+
+        // FIX: Use data.ProvisioningInProgress and data.totalAmount (or use the "this." equivalents)
+        // Also added a safety check to avoid division by zero or NaN if totalAmount is 0 or missing
+        if (data.totalAmount && data.totalAmount !== 0) {
+            const ProvisioningBacklogsPercent = (data.ProvisioningInProgress / data.totalAmount) * 100;
+            
+            if (ProvisioningBacklogsPercent !== 0) {
+                this.ProvisioningBacklogsPercent = ProvisioningBacklogsPercent.toFixed(1) + '%';
+            } else {
+                this.ProvisioningBacklogsPercent = '0.0%';
+            }
+        } else {
+            this.ProvisioningBacklogsPercent = '0.0%';
+        }
+        
+        this.ProvisioningBacklogscard5Error = false;
+
+    } else {
+        throw new Error('Missing card 5 payload');
+    }
+} catch (err) {
+    console.error('Card 5 breakdown caught:', err);
+    this.ProvisioningBacklogscard5Error = true;
+}
+
+
             // --- TRY CHART: MONTHLY TREND ANALYSIS (Static Jan-Jul Timeline, Filter Independent) ---
             try {
                 if (data.monthlyMrcValues && data.monthlyMrcValues.length > 0) {
@@ -203,7 +242,7 @@ export default class ProvisioningDashboard extends LightningElement {
             this.ApprovalGrowthcardError = true;
             this.ProvisioningCompletedcard3Error = true;
              this.ProvisioningCompletedGrowthcard4Error = true;
-            // this.ProvisioningBacklogscard5Error = true;
+            this.ProvisioningBacklogscard5Error = true;
             // this.ProvisioningBacklogscard6Error = true;
             this.chartError = true;
             console.error('Apex connection level failure:', error);

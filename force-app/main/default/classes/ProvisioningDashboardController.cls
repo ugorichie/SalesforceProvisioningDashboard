@@ -33,6 +33,10 @@ public with sharing class ProvisioningDashboardController {
             Decimal ProvisioningCompletedGrowthPrevious = 0; // 
             //Decimal ProvisioningCompletedGrowthTrend = 0;
 
+            //Variable for Card 5 : Provisioning Backlogs
+            Decimal ProvisioningBacklogsPercent = 0; // This is calculated by ( ProvisionInProgress / TotalAmount) * 100
+            Decimal ProvisioningInProgress = 0; // This is calculated by ( ProvisionInProgress / TotalAmount) * 100 within the selected time period
+
             switch on timePeriod {
                                 
                 when 'this_week' {
@@ -59,6 +63,10 @@ public with sharing class ProvisioningDashboardController {
                     provisioningCompletedGrowthCurrent = 15.0;
                     ProvisioningCompletedGrowthPrevious = 12.0;
                     // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0
+
+                    // Sample data for this week card 5
+                   // ProvisioningBacklogsPercent = 10.0;
+                    ProvisioningInProgress = 15000;
                 }
 
                 when 'this_month' {
@@ -85,6 +93,10 @@ public with sharing class ProvisioningDashboardController {
                     provisioningCompletedGrowthCurrent = 18.0;
                     ProvisioningCompletedGrowthPrevious = 15.0;
                     // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0
+
+                    // Sample data for this month Card 5
+                   // ProvisioningBacklogsPercent = 10.0;
+                    ProvisioningInProgress = 28000;
                     
                 }
 
@@ -111,7 +123,12 @@ public with sharing class ProvisioningDashboardController {
                     ProvisioningCompletedGrowthPercent = 21.0;      
                     provisioningCompletedGrowthCurrent = 29.0;
                     ProvisioningCompletedGrowthPrevious = 18.0;
-                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0    
+                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0   
+                    
+    
+                    // Sample data for this month Card 5
+                   // ProvisioningBacklogsPercent = 10.0;
+                    ProvisioningInProgress = 45000;
                 }
 
                 when 'ytd' {
@@ -137,7 +154,11 @@ public with sharing class ProvisioningDashboardController {
                     ProvisioningCompletedGrowthPercent = 29.0;  
                     provisioningCompletedGrowthCurrent = 22.0;
                     ProvisioningCompletedGrowthPrevious = 5.0;
-                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0    
+                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0 
+                    
+                    // Sample data for this month Card 5
+                   // ProvisioningBacklogsPercent = 10.0;
+                    ProvisioningInProgress = 70000;
                 }
                 when 'custom' {
 
@@ -161,6 +182,10 @@ public with sharing class ProvisioningDashboardController {
                     ProvisioningCompletedGrowthPercent = 10.0;
                     provisioningCompletedGrowthCurrent = 11.0;
                     ProvisioningCompletedGrowthPrevious = 15.0;
+
+                    // Sample data for this month Card 5
+                   // ProvisioningBacklogsPercent = 10.0;
+                    ProvisioningInProgress = 80000;
                     
                 }
                 when else {
@@ -186,7 +211,12 @@ public with sharing class ProvisioningDashboardController {
                     ProvisioningCompletedGrowthPercent = 18.0;  
                     provisioningCompletedGrowthCurrent = 13.0;
                     ProvisioningCompletedGrowthPrevious = 5.0;
+
+                    // Sample data for this month Card 5
+                   // ProvisioningBacklogsPercent = 10.0;
+                    ProvisioningInProgress = 45000;
                 }
+
             }
 
              // ==================== ADDED THIS BLOCK FOR THE CHART ====================
@@ -226,6 +256,10 @@ public with sharing class ProvisioningDashboardController {
             result.put('ProvisioningCompletedGrowthPercent', ProvisioningCompletedGrowthPercent);
             result.put('provisioningCompletedGrowthCurrent', provisioningCompletedGrowthCurrent);   
             result.put('ProvisioningCompletedGrowthPrevious', ProvisioningCompletedGrowthPrevious);
+
+            //Add metrics for card 5 (Provisioning Backlogs)
+            result.put('ProvisioningBacklogsPercent', ProvisioningBacklogsPercent);
+            result.put('ProvisioningInProgress', ProvisioningInProgress);
 
             
             result.put('status', 'Success');
