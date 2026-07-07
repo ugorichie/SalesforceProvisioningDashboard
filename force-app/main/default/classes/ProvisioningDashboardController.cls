@@ -19,12 +19,19 @@ public with sharing class ProvisioningDashboardController {
             String timeframe = '';
 
             //Variable values for Card 3 : Provisioning Completed 
-            decimal provisionedCompletedCount = 0;
-            decimal ProvisionedCompletedPercentageCurrent = 0;
-            decimal ProvisionedCompletedPercentagePrevious = 0;
-            decimal ProvisionedCompletedMRC = 0;
-            decimal ProvisionedCompletedMRCPercentageCurrent = 0;
-            decimal ProvisionedCompletedMRCPercentagePrevious = 0;
+            decimal provisionedCompletedCount = 0; //how many provisioning completed within the selected time period
+            decimal ProvisionedCompletedPercentageCurrent = 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100 within the selected time period
+            decimal ProvisionedCompletedPercentagePrevious = 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100 within the previous time period
+            decimal ProvisionedCompletedMRC = 0; // This is MRC value of all the provisioned completed within the selected time period
+            decimal ProvisionedCompletedMRCPercentageCurrent = 0; // This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the selected time period
+            decimal ProvisionedCompletedMRCPercentagePrevious = 0;// This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the previous time period                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+
+            //Variable for Card 4 : Provisioning Completed Growth
+            // This is calculated by ( ProvisionedCompletedCount / TotalAmount) * 100 
+            Decimal ProvisioningCompletedGrowthPercent= 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100
+            Decimal ProvisioningCompletedGrowthCurrent = 0; // 
+            Decimal ProvisioningCompletedGrowthPrevious = 0; // 
+            //Decimal ProvisioningCompletedGrowthTrend = 0;
 
             switch on timePeriod {
                                 
@@ -46,6 +53,12 @@ public with sharing class ProvisioningDashboardController {
                     ProvisionedCompletedMRC = 180000;
                     ProvisionedCompletedMRCPercentageCurrent = 12.0;
                     ProvisionedCompletedMRCPercentagePrevious = 10.0;
+
+                    // Sample data for this week card 4
+                    ProvisioningCompletedGrowthPercent = 12.0;
+                    provisioningCompletedGrowthCurrent = 15.0;
+                    ProvisioningCompletedGrowthPrevious = 12.0;
+                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0
                 }
 
                 when 'this_month' {
@@ -66,6 +79,13 @@ public with sharing class ProvisioningDashboardController {
                     ProvisionedCompletedMRC = 720000;
                     ProvisionedCompletedMRCPercentageCurrent = 15.0;
                     ProvisionedCompletedMRCPercentagePrevious = 10.0;   
+
+                    // Sample data for this month Card 4
+                    ProvisioningCompletedGrowthPercent = 17.0;  
+                    provisioningCompletedGrowthCurrent = 18.0;
+                    ProvisioningCompletedGrowthPrevious = 15.0;
+                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0
+                    
                 }
 
                 when 'this_quarter' {
@@ -86,6 +106,12 @@ public with sharing class ProvisioningDashboardController {
                     ProvisionedCompletedMRC = 2160000;
                     ProvisionedCompletedMRCPercentageCurrent = 18.0;
                     ProvisionedCompletedMRCPercentagePrevious = 10.0;
+
+                    // Sample data for this quarter Card 4
+                    ProvisioningCompletedGrowthPercent = 21.0;      
+                    provisioningCompletedGrowthCurrent = 29.0;
+                    ProvisioningCompletedGrowthPrevious = 18.0;
+                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0    
                 }
 
                 when 'ytd' {
@@ -105,7 +131,13 @@ public with sharing class ProvisioningDashboardController {
                     ProvisionedCompletedPercentagePrevious = 20.0;
                     ProvisionedCompletedMRC = 6300000;
                     ProvisionedCompletedMRCPercentageCurrent = 20.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 10.0;
+                    ProvisionedCompletedMRCPercentagePrevious = 5.0;
+
+                    // Sample data for YTD Card 4
+                    ProvisioningCompletedGrowthPercent = 29.0;  
+                    provisioningCompletedGrowthCurrent = 22.0;
+                    ProvisioningCompletedGrowthPrevious = 5.0;
+                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0    
                 }
                 when 'custom' {
 
@@ -124,6 +156,12 @@ public with sharing class ProvisioningDashboardController {
                     ProvisionedCompletedMRC = 4500000;
                     ProvisionedCompletedMRCPercentageCurrent = 15.0;
                     ProvisionedCompletedMRCPercentagePrevious = 10.0;
+
+                    // Sample data for custom range Card 4
+                    ProvisioningCompletedGrowthPercent = 10.0;
+                    provisioningCompletedGrowthCurrent = 11.0;
+                    ProvisioningCompletedGrowthPrevious = 15.0;
+                    
                 }
                 when else {
                     // Default case for 'all_time' or any other unspecified time period
@@ -143,6 +181,11 @@ public with sharing class ProvisioningDashboardController {
                     ProvisionedCompletedMRC = 720000;
                     ProvisionedCompletedMRCPercentageCurrent = 15.0;
                     ProvisionedCompletedMRCPercentagePrevious = 10.0;
+
+                    // Sample data for all time Card 4
+                    ProvisioningCompletedGrowthPercent = 18.0;  
+                    provisioningCompletedGrowthCurrent = 13.0;
+                    ProvisioningCompletedGrowthPrevious = 5.0;
                 }
             }
 
@@ -162,13 +205,15 @@ public with sharing class ProvisioningDashboardController {
             result.put('monthlyMrcValues', monthlyMrcValues);
            
             // Add the other metrics to the result map
-            //Add metrics for card 1
+            //Add metrics for card 1(Total Amount Provisioned))
             result.put('totalAmount', totalAmount);
             result.put('percentageGrowth', percentageGrowth);
-            //Add metrics for card 2
+
+            //Add metrics for card 2 (Approval Growth Rate)
             result.put('currentGrowthRate', currentGrowthRate);
             result.put('previousGrowthRate', previousGrowthRate);
-            //Add metrics for card 3
+            
+            //Add metrics for card 3 (Provisioning Completed)
             result.put('provisionedCompletedCount', provisionedCompletedCount);
             result.put('ProvisionedCompletedPercentageCurrent', ProvisionedCompletedPercentageCurrent);
             result.put('ProvisionedCompletedPercentagePrevious', ProvisionedCompletedPercentagePrevious);
@@ -176,6 +221,11 @@ public with sharing class ProvisioningDashboardController {
             result.put('ProvisionedCompletedMRCPercentageCurrent', ProvisionedCompletedMRCPercentageCurrent);
             result.put('ProvisionedCompletedMRCPercentagePrevious', ProvisionedCompletedMRCPercentagePrevious);
             result.put('timeframe', timeframe);
+
+            //Add metrics for card 4 (Provisioning Completed Growth)
+            result.put('ProvisioningCompletedGrowthPercent', ProvisioningCompletedGrowthPercent);
+            result.put('provisioningCompletedGrowthCurrent', provisioningCompletedGrowthCurrent);   
+            result.put('ProvisioningCompletedGrowthPrevious', ProvisioningCompletedGrowthPrevious);
 
             
             result.put('status', 'Success');

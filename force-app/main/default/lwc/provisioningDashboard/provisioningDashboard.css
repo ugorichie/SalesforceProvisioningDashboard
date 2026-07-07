@@ -193,3 +193,17 @@
     border-top: 1px solid rgba(255, 255, 255, 0.2);
     margin: 16px 0;
 }
+
+/* Green state for positive growth */
+.trend-positive {
+    color: #2ec872;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+/* Red state for negative drops */
+.trend-negative {
+    color: #ef4444; /* Warning red color */
+    font-weight: 700;
+    font-size: 18px;
+}

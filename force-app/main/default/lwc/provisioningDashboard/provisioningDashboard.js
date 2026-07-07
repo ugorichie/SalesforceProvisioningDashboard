@@ -3,17 +3,28 @@ import { LightningElement, wire, track } from 'lwc';
 import getApprovalMetrics from '@salesforce/apex/ProvisioningDashboardController.getApprovalMetrics';
 
 export default class ProvisioningDashboard extends LightningElement {
+    // Card 1: Total Approvals Metrics
     @track formattedAmount = '$0.00';
     @track percentageGrowth = '0.0';
+
+    // Card 2: Approval Growth Metrics
     @track card2Value = '0%';
     @track card2Trend = '0.0%';
+
+    // Card 3: Provisioning Completed Metrics
     @track provisioningCompletedValue = 0;
     @track provisioningTrend = '0.0%';
     @track ProvisioningCompletedMRC = '$0.00';
     @track netMrcTrend = '0.0%';
     @track lastPeriod = ''; 
 
+    // Card 4: Provisioning Completed Growth Metrics
+    @track ProvisioningCompletedGrowthPercent = '0%';
+   // @track ProvisioningCompletedGrowthTrend = '0.0%';
+    @track ProvisioningCompletedGrowthCurrent = 0;
+    @track ProvisioningCompletedGrowthPrevious = 0;
 
+    // Filter and Date Range States
     @track selectedFilter = 'this_month'; 
     @track startDate = '';
     @track endDate = '';
@@ -127,6 +138,27 @@ export default class ProvisioningDashboard extends LightningElement {
                 this.ProvisioningCompletedcard3Error = true;
             }
 
+
+            // --- TRY CARD 4 Provisioninig Completed Growth (Filter-Responsive) ---
+            try {
+                if (data.ProvisioningCompletedGrowthPercent !== undefined) {
+                    const ProvisioningCompletedGrowthCurrent = data.ProvisioningCompletedGrowthCurrent;
+                    const ProvisioningCompletedGrowthPrevious = data.ProvisioningCompletedGrowthPrevious || 0;
+                    // Formatting the value
+                    this.ProvisioningCompletedGrowthPercent = `${data.ProvisioningCompletedGrowthPercent.toFixed(1)}%`;
+                    const ProvisioningCompletedGrowthTrend = ((ProvisioningCompletedGrowthCurrent - ProvisioningCompletedGrowthPrevious) / ProvisioningCompletedGrowthPrevious) * 100;
+                    // Formatting the trend
+                    this.ProvisioningCompletedGrowthTrend = `${Math.abs(ProvisioningCompletedGrowthTrend).toFixed(1)}%`;
+                    
+                    this.ProvisioningCompletedGrowthcard4Error = false;
+                } else {
+                    throw new Error('Missing card 4 payload');
+                }
+            } catch (err) {
+                console.error('Card 4 breakdown caught:', err);
+                this.ProvisioningCompletedGrowthcard4Error = true;
+            }
+
             // --- TRY CHART: MONTHLY TREND ANALYSIS (Static Jan-Jul Timeline, Filter Independent) ---
             try {
                 if (data.monthlyMrcValues && data.monthlyMrcValues.length > 0) {
@@ -170,7 +202,7 @@ export default class ProvisioningDashboard extends LightningElement {
             this.TotalApprovalcardError = true;
             this.ApprovalGrowthcardError = true;
             this.ProvisioningCompletedcard3Error = true;
-            // this.ProvisioningCompletedGrowthcard4Error = true;
+             this.ProvisioningCompletedGrowthcard4Error = true;
             // this.ProvisioningBacklogscard5Error = true;
             // this.ProvisioningBacklogscard6Error = true;
             this.chartError = true;
