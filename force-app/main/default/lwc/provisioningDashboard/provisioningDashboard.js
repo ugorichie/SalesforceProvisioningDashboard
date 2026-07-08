@@ -8,6 +8,9 @@ export default class ProvisioningDashboard extends LightningElement {
     @track percentageGrowth = '0.0';
     @track totalAmount = 0;
 
+    //Service In Progress
+    @track totalMRC_of_WIPServicesWithProvisioningApproval = 0;
+
     // Card 2: Approval Growth Metrics
     @track card2Value = '0%';
     @track card2Trend = '0.0%';
@@ -165,38 +168,58 @@ export default class ProvisioningDashboard extends LightningElement {
             }
 
 
-              // --- TRY CARD 5 Provisioning Backlogs  ---
+              // --- TRY CARD 5 Provisioning Backlogs % ---
             try {
-    if (data.ProvisioningInProgress !== undefined) {
-        // Assigning values to the tracked properties for card 5
-        this.provisioningInProgress = data.ProvisioningInProgress;
-        this.totalAmount = data.totalAmount;
-        this.lastPeriod = data.timeframe;
+                if (data.ProvisioningInProgress !== undefined) {
+                    // Assigning values to the tracked properties for card 5
+                    this.provisioningInProgress = data.ProvisioningInProgress;
+                    this.totalAmount = data.totalAmount;
+                    this.lastPeriod = data.timeframe;
 
-        // FIX: Use data.ProvisioningInProgress and data.totalAmount (or use the "this." equivalents)
-        // Also added a safety check to avoid division by zero or NaN if totalAmount is 0 or missing
-        if (data.totalAmount && data.totalAmount !== 0) {
-            const ProvisioningBacklogsPercent = (data.ProvisioningInProgress / data.totalAmount) * 100;
-            
-            if (ProvisioningBacklogsPercent !== 0) {
-                this.ProvisioningBacklogsPercent = ProvisioningBacklogsPercent.toFixed(1) + '%';
-            } else {
-                this.ProvisioningBacklogsPercent = '0.0%';
+                    // FIX: Use data.ProvisioningInProgress and data.totalAmount (or use the "this." equivalents)
+                    // Also added a safety check to avoid division by zero or NaN if totalAmount is 0 or missing
+                    if (data.totalAmount && data.totalAmount !== 0) {
+                        const ProvisioningBacklogsPercent = (data.ProvisioningInProgress / data.totalAmount) * 100;
+                        
+                        if (ProvisioningBacklogsPercent !== 0) {
+                            this.ProvisioningBacklogsPercent = ProvisioningBacklogsPercent.toFixed(1) + '%';
+                        } else {
+                            this.ProvisioningBacklogsPercent = '0.0%';
+                        }
+                    } else {
+                        this.ProvisioningBacklogsPercent = '0.0%';
+                    }
+                    
+                    this.ProvisioningBacklogscard5Error = false;
+
+                } else {
+                    throw new Error('Missing card 5 payload');
+                }
+            } catch (err) {
+                console.error('Card 5 breakdown caught:', err);
+                this.ProvisioningBacklogscard5Error = true;
             }
-        } else {
-            this.ProvisioningBacklogsPercent = '0.0%';
-        }
-        
-        this.ProvisioningBacklogscard5Error = false;
 
-    } else {
-        throw new Error('Missing card 5 payload');
-    }
-} catch (err) {
-    console.error('Card 5 breakdown caught:', err);
-    this.ProvisioningBacklogscard5Error = true;
-}
 
+            // --- TRY CARD 6 Provisioning Backlogs MRC ---
+            try {
+                if (data.totalMRC_of_WIPServicesWithProvisioningApproval !== undefined) {
+                    this.totalMRC_of_WIPServicesWithProvisioningApproval = this.formatToMillions(data.totalMRC_of_WIPServicesWithProvisioningApproval);
+                    const ProvisioningBacklogsPercent = (data.ProvisioningInProgress / data.totalAmount) * 100;
+                     if (ProvisioningBacklogsPercent !== 0) {
+                            this.ProvisioningBacklogsPercent = ProvisioningBacklogsPercent.toFixed(1) + '%';
+                        } else {
+                            this.ProvisioningBacklogsPercent = '0.0%';
+                        }
+                    this.lastPeriod = data.timeframe;
+                     this.ProvisioningBacklogscard6Error = false;
+                } else {
+                    throw new Error('Missing card 6 payload');
+                }
+            } catch (err) {
+                console.error('Card 6 breakdown caught:', err);
+                this.ProvisioningBacklogscard6Error = true;
+            }
 
             // --- TRY CHART: MONTHLY TREND ANALYSIS (Static Jan-Jul Timeline, Filter Independent) ---
             try {
@@ -243,7 +266,7 @@ export default class ProvisioningDashboard extends LightningElement {
             this.ProvisioningCompletedcard3Error = true;
              this.ProvisioningCompletedGrowthcard4Error = true;
             this.ProvisioningBacklogscard5Error = true;
-            // this.ProvisioningBacklogscard6Error = true;
+            this.ProvisioningBacklogscard6Error = true;
             this.chartError = true;
             console.error('Apex connection level failure:', error);
         }

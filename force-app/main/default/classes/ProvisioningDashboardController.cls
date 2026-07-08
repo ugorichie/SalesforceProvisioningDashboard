@@ -12,11 +12,17 @@ public with sharing class ProvisioningDashboardController {
             System.debug('Selected Filter from UI: ' + timePeriod);
             System.debug('Custom Date Bounds: ' + startRange + ' to ' + endRange);
             
-            Decimal totalAmount = 0;
+            Decimal totalAmount = 0; //Total MRC amount of all services with provisioning approval within the selected time period
             Decimal percentageGrowth = 0;
             Decimal currentGrowthRate = 0;
             Decimal previousGrowthRate = 0;
             String timeframe = '';
+
+            //Work in Progress Metrics
+            decimal countWIPServicesWithProvisioningApproval = 0; //Number of services with provisioning approval, but still in progress
+
+            decimal totalMRC_of_WIPServicesWithProvisioningApproval = 0; //Total MRC amount of all services with provisioning approval, but still in progress
+            //End of Work in Progress Metrics
 
             //Variable values for Card 3 : Provisioning Completed 
             decimal provisionedCompletedCount = 0; //how many provisioning completed within the selected time period
@@ -24,8 +30,7 @@ public with sharing class ProvisioningDashboardController {
             decimal ProvisionedCompletedPercentagePrevious = 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100 within the previous time period
             decimal ProvisionedCompletedMRC = 0; // This is MRC value of all the provisioned completed within the selected time period
             decimal ProvisionedCompletedMRCPercentageCurrent = 0; // This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the selected time period
-            decimal ProvisionedCompletedMRCPercentagePrevious = 0;// This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the previous time period                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-
+            decimal ProvisionedCompletedMRCPercentagePrevious = 0;// This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the previous time period                                                                                                                                                                                                                                                                                                       
             //Variable for Card 4 : Provisioning Completed Growth
             // This is calculated by ( ProvisionedCompletedCount / TotalAmount) * 100 
             Decimal ProvisioningCompletedGrowthPercent= 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100
@@ -33,9 +38,14 @@ public with sharing class ProvisioningDashboardController {
             Decimal ProvisioningCompletedGrowthPrevious = 0; // 
             //Decimal ProvisioningCompletedGrowthTrend = 0;
 
-            //Variable for Card 5 : Provisioning Backlogs
+            //Variable for Card 5 : Provisioning Backlogs Percent 
             Decimal ProvisioningBacklogsPercent = 0; // This is calculated by ( ProvisionInProgress / TotalAmount) * 100
             Decimal ProvisioningInProgress = 0; // This is calculated by ( ProvisionInProgress / TotalAmount) * 100 within the selected time period
+
+            //Varieable for Card 6 : Provisioning Backlogs MRC
+            Decimal ProvisioningBacklogsMRC = 0; // This is calculated by ( Taking all the sum of MRC of all services with provisioning approval, but still in progress)
+            
+
 
             switch on timePeriod {
                                 
@@ -67,6 +77,10 @@ public with sharing class ProvisioningDashboardController {
                     // Sample data for this week card 5
                    // ProvisioningBacklogsPercent = 10.0;
                     ProvisioningInProgress = 15000;
+
+                    // Sample data for this week card 6
+                    totalMRC_of_WIPServicesWithProvisioningApproval = 10000;
+
                 }
 
                 when 'this_month' {
@@ -97,6 +111,9 @@ public with sharing class ProvisioningDashboardController {
                     // Sample data for this month Card 5
                    // ProvisioningBacklogsPercent = 10.0;
                     ProvisioningInProgress = 28000;
+
+                    // Sample data for this month Card 6
+                    totalMRC_of_WIPServicesWithProvisioningApproval = 25000;
                     
                 }
 
@@ -129,6 +146,10 @@ public with sharing class ProvisioningDashboardController {
                     // Sample data for this month Card 5
                    // ProvisioningBacklogsPercent = 10.0;
                     ProvisioningInProgress = 45000;
+
+                    // Sample data for this month Card 6
+                    totalMRC_of_WIPServicesWithProvisioningApproval = 50000;
+
                 }
 
                 when 'ytd' {
@@ -159,6 +180,8 @@ public with sharing class ProvisioningDashboardController {
                     // Sample data for this month Card 5
                    // ProvisioningBacklogsPercent = 10.0;
                     ProvisioningInProgress = 70000;
+                    // Sample data for this month Card 6
+                    totalMRC_of_WIPServicesWithProvisioningApproval = 50000;    
                 }
                 when 'custom' {
 
@@ -186,6 +209,9 @@ public with sharing class ProvisioningDashboardController {
                     // Sample data for this month Card 5
                    // ProvisioningBacklogsPercent = 10.0;
                     ProvisioningInProgress = 80000;
+
+                    // Sample data for this month Card 6
+                    totalMRC_of_WIPServicesWithProvisioningApproval = 60000;    
                     
                 }
                 when else {
@@ -215,6 +241,9 @@ public with sharing class ProvisioningDashboardController {
                     // Sample data for this month Card 5
                    // ProvisioningBacklogsPercent = 10.0;
                     ProvisioningInProgress = 45000;
+
+                    // Sample data for this month Card 6
+                    totalMRC_of_WIPServicesWithProvisioningApproval = 50000;
                 }
 
             }
@@ -260,6 +289,9 @@ public with sharing class ProvisioningDashboardController {
             //Add metrics for card 5 (Provisioning Backlogs)
             result.put('ProvisioningBacklogsPercent', ProvisioningBacklogsPercent);
             result.put('ProvisioningInProgress', ProvisioningInProgress);
+
+            //Add metrics for card 6 (Provisioning Backlogs MRC)
+            result.put('totalMRC_of_WIPServicesWithProvisioningApproval', totalMRC_of_WIPServicesWithProvisioningApproval);
 
             
             result.put('status', 'Success');
