@@ -153,6 +153,21 @@
                 </template>
             </div>
 
+            <div class="dashboard-card-dark">
+                <template if:false={ProvisioningBacklogscard5Error}>
+
+                    <div class="card-title">Provisioning Backlogs (%)</div>
+                    <div class="card-subtitle-lbl">&nbsp;</div>
+                    
+                    <div class="card-value">{ProvisioningBacklogsPercent}</div>
+                   
+                </template>
+                
+                <template if:true={ProvisioningBacklogscard5Error}>
+                    <div class="error-state-dark">Failed to load Provisioning Backlogs % data.</div>
+                </template>
+            </div>
+
             
 
         </div>

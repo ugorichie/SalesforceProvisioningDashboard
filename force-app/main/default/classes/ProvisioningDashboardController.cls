@@ -288,6 +288,67 @@ public with sharing class ProvisioningDashboardController {
         return result;
     }
 
+
+    // =========================================================================
+    // CARD 6 DATA RETRIEVAL: Customer Products (Provisioning Backlogs %)
+    // Formula: (WIP Services ÷ Total Services with Provisioning Approvals) * 100
+    // =========================================================================
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getCard6BacklogMetrics(String timePeriod, String startRange, String endRange) {
+        Map<String, Object> result = new Map<String, Object>();
+        
+        try {
+            // 1. Resolve date boundaries based on global dashboard selections
+            Map<String, Date> dateBounds = calculateDateBounds(timePeriod, startRange, endRange);
+            Date currentStart = dateBounds.get('currentStart');
+            Date currentEnd = dateBounds.get('currentEnd');
+
+            // Convert Date filters to DateTime for accurate CreatedDate boundary filtering
+            DateTime startDateTime = DateTime.newInstance(currentStart, Time.newInstance(0, 0, 0, 0));
+            DateTime endDateTime = DateTime.newInstance(currentEnd, Time.newInstance(23, 59, 59, 999));
+
+            // 2. QUERY: Fetch aggregated counts grouped by status within the timeframe
+            AggregateResult[] groupedResults = [
+                SELECT Status__c, COUNT(Id) statusCount
+                FROM Customer_Products__c
+                WHERE CreatedDate >= :startDateTime
+                  AND CreatedDate <= :endDateTime
+                GROUP BY Status__c
+            ];
+
+            Decimal wipCount = 0.0;
+            Decimal totalCount = 0.0;
+
+            // 3. PARSE AGGREGATION RESULTS
+            for (AggregateResult ar : groupedResults) {
+                String status = (String) ar.get('Status__c');
+                Decimal count = (Decimal) ar.get('statusCount');
+
+                // Accumulate every service record into the total baseline denominator
+                totalCount += count;
+
+                // Capture the exact count for Work In Progress items
+                if (status == 'In Progress') {
+                    wipCount = count;
+                }
+            }
+
+            // 4. CALCULATE THE BACKLOG PERCENTAGE
+            Decimal backlogPercent = 0.0;
+            if (totalCount > 0) {
+                backlogPercent = (wipCount / totalCount) * 100;
+            }
+
+            // 5. PACK RESULT MAP USING CARD 6 UNIQUE KEY
+            result.put('card6_backlogPercent', backlogPercent.setScale(1));
+            result.put('status', 'Success');
+
+        } catch (Exception e) {
+            throw new AuraHandledException('Error executing Card 6 metric calculation: ' + e.getMessage());
+        }
+        
+        return result;
+    }
     
 
     // HELPER: Standardized Growth Formula preventing divide-by-zero errors

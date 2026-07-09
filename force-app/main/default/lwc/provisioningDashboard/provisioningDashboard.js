@@ -5,7 +5,7 @@ import { loadStyle } from 'lightning/platformResourceLoader';
 import getCard3ProductMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard3ProductMetrics';
 import getCard4GrowthMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard4GrowthMetrics';
 import getCard5WipMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard5WipMetrics';
-
+import getCard6BacklogMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard6BacklogMetrics';
 
 export default class ProvisioningDashboard extends LightningElement {
     // ==========================================
@@ -90,6 +90,18 @@ export default class ProvisioningDashboard extends LightningElement {
     // ==========================================
     // END OF CARD 5 PROPERTIES
     // ==========================================   
+
+    // ==========================================
+    // CARD 6 PROPERTIES (Provisioning Backlogs %)
+    // ==========================================
+    // Matches the unique error variable name defined in your HTML snippet
+    ProvisioningBacklogscard5Error = false; 
+    
+    // Main Value containing the calculated Backlog Percentage string
+    ProvisioningBacklogsPercent = '0.0%';
+    // ===========================================
+    // END OF CARD 6 PROPERTIES
+    // ===========================================
 
 
     filterOptions = [
@@ -272,6 +284,34 @@ export default class ProvisioningDashboard extends LightningElement {
         } else if (error) {
             console.error('Card 5 Wire Pipeline error:', error);
             this.WorkInProgresscardError = true;
+        }
+    }
+
+
+    // ==========================================
+    // CARD 6 WIRE SERVICE (Customer_Products__c Backlog)
+    // ==========================================
+    @wire(getCard6BacklogMetrics, { 
+        timePeriod: '$selectedFilter', 
+        startRange: '$startDate', 
+        endRange: '$endDate' 
+    })
+    wiredCard6Metrics({ error, data }) {
+        if (data && data.status === 'Success') {
+            try {
+                // --- MAIN VALUE: Map and append percent literal notation ---
+                const backlogVal = data.card6_backlogPercent;
+                this.ProvisioningBacklogsPercent = `${backlogVal}%`;
+
+                // Reset error boundary state upon successful data load
+                this.ProvisioningBacklogscard5Error = false;
+            } catch (err) {
+                console.error('Card 6 data assignment exception caught:', err);
+                this.ProvisioningBacklogscard5Error = true;
+            }
+        } else if (error) {
+            console.error('Card 6 operational channel failed:', error);
+            this.ProvisioningBacklogscard5Error = true;
         }
     }
 
