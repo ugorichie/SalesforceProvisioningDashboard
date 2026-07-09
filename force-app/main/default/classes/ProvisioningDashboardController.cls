@@ -222,6 +222,74 @@ public with sharing class ProvisioningDashboardController {
     }
 
 
+    // =========================================================================
+    // CARD 5 DATA RETRIEVAL: Customer Products (Work In Progress Metrics)
+    // =========================================================================
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getCard5WipMetrics(String timePeriod, String startRange, String endRange) {
+        Map<String, Object> result = new Map<String, Object>();
+        
+        try {
+            // 1. Fetch exact date boundaries using the shared helper engine
+            Map<String, Date> dateBounds = calculateDateBounds(timePeriod, startRange, endRange);
+            Date currentStart = dateBounds.get('currentStart');
+            Date currentEnd = dateBounds.get('currentEnd');
+
+            // Convert Date boundaries to DateTime to map precisely against CreatedDate
+            DateTime startDateTime = DateTime.newInstance(currentStart, Time.newInstance(0, 0, 0, 0));
+            DateTime endDateTime = DateTime.newInstance(currentEnd, Time.newInstance(23, 59, 59, 999));
+
+            // 2. RUN BULK AGGREGATION GROUPED BY STATUS
+            // Fetches all records created within the timeframe to evaluate ratios
+            AggregateResult[] groupedResults = [
+                SELECT Status__c, SUM(MRC__c) statusMrc, COUNT(Id) statusCount
+                FROM Customer_Products__c
+                WHERE CreatedDate >= :startDateTime
+                  AND CreatedDate <= :endDateTime
+                GROUP BY Status__c
+            ];
+
+            Decimal wipCumulativeMrc = 0.0;
+            Decimal wipRecordCount = 0.0;
+            Decimal totalRecordCount = 0.0;
+
+            // 3. PROCESS THE AGGREGATION MATRIX
+            for (AggregateResult ar : groupedResults) {
+                String status = (String) ar.get('Status__c');
+                Decimal count = (Decimal) ar.get('statusCount');
+                Decimal mrc = ar.get('statusMrc') == null ? 0.0 : (Decimal) ar.get('statusMrc');
+
+                // Accumulate overall total count for the baseline ratio denominator
+                totalRecordCount += count;
+
+                // Capture targeted stats exclusively for "In Progress" services
+                if (status == 'In Progress') {
+                    wipCumulativeMrc = mrc;
+                    wipRecordCount = count;
+                }
+            }
+
+            // 4. CALCULATE DISTRIBUTION PERCENTAGE RATIO
+            // Formula: (WIP Services / Total Services Created) * 100
+            Decimal wipRatioPercent = 0.0;
+            if (totalRecordCount > 0) {
+                wipRatioPercent = (wipRecordCount / totalRecordCount) * 100;
+            }
+
+            // 5. PACK PAYLOAD WITH UNIQUE CARD 5 MAPPINGS
+            result.put('card5_wipMrcValue', wipCumulativeMrc);
+            result.put('card5_wipRatioPercent', wipRatioPercent.setScale(1));
+            result.put('status', 'Success');
+
+        } catch (Exception e) {
+            throw new AuraHandledException('Error executing Card 5 metric aggregation: ' + e.getMessage());
+        }
+        
+        return result;
+    }
+
+    
+
     // HELPER: Standardized Growth Formula preventing divide-by-zero errors
     private static Decimal calculatePercentageGrowth(Decimal currentVal, Decimal priorVal) {
         if (priorVal > 0) {

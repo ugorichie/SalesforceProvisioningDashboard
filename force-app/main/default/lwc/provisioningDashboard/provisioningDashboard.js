@@ -4,6 +4,8 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { loadStyle } from 'lightning/platformResourceLoader';
 import getCard3ProductMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard3ProductMetrics';
 import getCard4GrowthMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard4GrowthMetrics';
+import getCard5WipMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard5WipMetrics';
+
 
 export default class ProvisioningDashboard extends LightningElement {
     // ==========================================
@@ -70,6 +72,25 @@ export default class ProvisioningDashboard extends LightningElement {
     // ==========================================
     // END OF CARD 4 PROPERTIES
     // ==========================================
+
+
+    // ==========================================
+    // CARD 5 PROPERTIES (Work In Progress - WIP)
+    // ==========================================
+    WorkInProgresscardError = false;
+    
+    // Main Value (Cumulative MRC of In Progress Services)
+    card5_wipMrcValue = '$0K';
+    
+    // Trend Value (Percentage Ratio of WIP vs All Created Services)
+    card5_wipPercentage = '0.0%';
+    card5_isZero = true;
+    card5_trendIcon = '';
+    card5_trendClass = 'trend-neutral';
+    // ==========================================
+    // END OF CARD 5 PROPERTIES
+    // ==========================================   
+
 
     filterOptions = [
         { label: 'This Week', value: 'this_week' },
@@ -210,6 +231,47 @@ export default class ProvisioningDashboard extends LightningElement {
         } else if (error) {
             console.error('Card 4 Wire Error:', error);
             this.ProvisioningCompletedGrowthcard4Error = true;
+        }
+    }
+
+
+    // ==========================================
+    // CARD 5 WIRE SERVICE (Customer_Products__c WIP)
+    // ==========================================
+    @wire(getCard5WipMetrics, { 
+        timePeriod: '$selectedFilter', 
+        startRange: '$startDate', 
+        endRange: '$endDate' 
+    })
+    wiredCard5Metrics({ error, data }) {
+        if (data && data.status === 'Success') {
+            try {
+                // --- MAIN VALUE: Format WIP Cumulative MRC ---
+                this.card5_wipMrcValue = this.formatCurrencyDynamic(data.card5_wipMrcValue);
+
+                // --- TREND VALUE: Handle WIP Ratio Presentation Logic ---
+                const wipRatio = data.card5_wipRatioPercent;
+                this.card5_wipPercentage = `${wipRatio}%`;
+
+                // Configure visual indicator thresholds for the creation ratio
+                if (wipRatio > 0) {
+                    this.card5_isZero = false;
+                    this.card5_trendIcon = '▲';
+                    this.card5_trendClass = 'trend-green'; // Styles container positive/active
+                } else {
+                    this.card5_isZero = true;
+                    this.card5_trendIcon = '';
+                    this.card5_trendClass = 'trend-neutral';
+                }
+
+                this.WorkInProgresscardError = false;
+            } catch (err) {
+                console.error('Card 5 Payload unpacking failure:', err);
+                this.WorkInProgresscardError = true;
+            }
+        } else if (error) {
+            console.error('Card 5 Wire Pipeline error:', error);
+            this.WorkInProgresscardError = true;
         }
     }
 

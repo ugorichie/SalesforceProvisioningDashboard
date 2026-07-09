@@ -130,6 +130,31 @@
                 </template>
             </div>
 
+            <div class="dashboard-card-dark">
+                <template if:false={WorkInProgresscardError}>
+
+                    <div class="card-title">Work In Progress</div>
+                    <div class="card-subtitle-lbl">(MRC)</div>
+                    
+                    <div class="card-value">{card5_wipMrcValue}</div>
+                    
+                    <div class="trend-stack-container">
+                        <div class={card5_trendClass}>
+                            <template if:false={card5_isZero}>
+                                <span class="trend-arrow">{card5_trendIcon}</span>
+                            </template>
+                            <span class="trend-percentage">{card5_wipPercentage}</span>
+                        </div>
+                    </div>
+                </template>
+                
+                <template if:true={WorkInProgresscardError}>
+                    <div class="error-state-dark">Failed to load Work In Progress metrics data.</div>
+                </template>
+            </div>
+
+            
+
         </div>
     </div>
 </template>
