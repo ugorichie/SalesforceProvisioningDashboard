@@ -1,279 +1,161 @@
-
 import { LightningElement, wire, track } from 'lwc';
-import getApprovalMetrics from '@salesforce/apex/ProvisioningDashboardController.getApprovalMetrics';
+import getProvisioningMetrics from '@salesforce/apex/ProvisioningDashboardController.getProvisioningMetrics';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { loadStyle } from 'lightning/platformResourceLoader';
+import getCard3ProductMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard3ProductMetrics';
 
 export default class ProvisioningDashboard extends LightningElement {
-    // Card 1: Total Approvals Metrics
-    @track formattedAmount = '$0.00';
-    @track percentageGrowth = '0.0';
-    @track totalAmount = 0;
-
-    //Service In Progress
-    @track totalMRC_of_WIPServicesWithProvisioningApproval = 0;
-
-    // Card 2: Approval Growth Metrics
-    @track card2Value = '0%';
-    @track card2Trend = '0.0%';
-
-    // Card 3: Provisioning Completed Metrics
-    @track provisioningCompletedValue = 0;
-    @track provisioningTrend = '0.0%';
-    @track ProvisioningCompletedMRC = '$0.00';
-    @track netMrcTrend = '0.0%';
-    @track lastPeriod = ''; 
-
-    // Card 4: Provisioning Completed Growth Metrics
-    @track ProvisioningCompletedGrowthPercent = '0%';
-   // @track ProvisioningCompletedGrowthTrend = '0.0%';
-    @track ProvisioningCompletedGrowthCurrent = 0;
-    @track ProvisioningCompletedGrowthPrevious = 0;
-
-    // Card 5: Provisioning Backlogs Metrics
-    @track provisioningInProgress = 0;
-    @track ProvisioningBacklogsPercent = '0.0%';
-
-    // Filter and Date Range States
+    // ==========================================
+    // GLOBAL FILTER CONTROLS
+    // ==========================================
     @track selectedFilter = 'this_month'; 
     @track startDate = '';
     @track endDate = '';
     @track isCustomDate = false;
+    timeframeText = 'vs Last Month';
+    globalError = false;
 
-    // Fixed 12 Months horizontal axis array mapping data profiles
-    chartMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // ==========================================
+    // CARD 1 PROPERTIES (Provisioning Completed)
+    // ==========================================
+    card1_formattedMrc = '$0K';
+    card1_percentageGrowth = '0.0%';
+    card1_isZero = true;
+    card1_trendIcon = '';
+    card1_trendClass = 'trend-neutral';
 
-    // Dynamic Chart Track States
-    @track chartDataPoints = [];
-    @track chartPathData = '';
+    // ==========================================
+    // CARD 2 PROPERTIES (Approval Growth %)
+    // ==========================================
+    card2_MainValue = '0.0%';
+    card2_percentageGrowth = '0.0%';
+    card2_isZero = true;
+    card2_trendIcon = '';
+    card2_trendClass = 'trend-neutral';
 
-    // Hardcoded Chart Axis Label Fallbacks
-    @track yLabelMax = '$3.2M';
-    @track yLabelMidHigh = '$2.8M';
-    @track yLabelMid = '$2.5M';
-    @track yLabelMidLow = '$2.1M';
-    @track yLabelMin = '$1.8M';
+    // ==========================================
+    // CARD 3 PROPERTIES (Provisioning Completed / Net MRC)
+    // ==========================================
+    ProvisioningCompletedcard3Error = false;
+    
+    // Top Section (Volume Count)
+    provisioningCompletedValue = '0';
+    provisioningTrend = '0.0%';
+    card3_countIsZero = true;
+    card3_countTrendIcon = '';
+    card3_countTrendClass = 'trend-neutral';
 
-    // Independent Error States
-    @track TotalApprovalcardError = false;
-    @track ApprovalGrowthcardError = false; 
-    @track ProvisioningCompletedcard3Error = false;
-    @track ProvisioningCompletedGrowthcard4Error = false;
-    @track chartError = false;
+    // Bottom Section (Net MRC Value & Dual Trends)
+    ProvisioningCompletedMRC = '$0K';
+    netMrcTrend = '$0K';
+    percentageMrcTrend = '0.0%';
+    card3_mrcIsZero = true;
+    card3_mrcTrendIcon = '';
+    card3_mrcTrendClass = 'trend-neutral';
 
     filterOptions = [
         { label: 'This Week', value: 'this_week' },
         { label: 'This Month', value: 'this_month' },
         { label: 'This Quarter', value: 'this_quarter' },
         { label: 'YTD', value: 'ytd' },
-        { label: 'Custom Date Range', value: 'custom' }
+        { label: 'Custom Date', value: 'custom' }
     ];
 
-    // Wire parameter dependencies watch the filters to modify Card calculations dynamically
-    @wire(getApprovalMetrics, { 
+    @wire(getProvisioningMetrics, { 
         timePeriod: '$selectedFilter', 
         startRange: '$startDate', 
         endRange: '$endDate' 
     })
     wiredMetrics({ error, data }) {
         if (data && data.status === 'Success') {
-            
-            // --- TRY CARD 1: TOTAL APPROVALS (Filter-Responsive) ---
             try {
-                if (data.totalAmount !== undefined) {
-                    this.percentageGrowth = data.percentageGrowth;
-                    this.formattedAmount = this.formatToMillions(data.totalAmount);
-                    this.TotalApprovalcardError = false; 
-                     this.lastPeriod = data.timeframe;
-                } else {
-                    throw new Error('Missing card 1 payload');
-                }
+                this.timeframeText = data.timeframeText;
+                
+                // ==========================================
+                // PROCESS CARD 1 (Cumulative MRC / MRC Growth)
+                // ==========================================
+                this.card1_formattedMrc = this.formatCurrencyDynamic(data.card1_currentMrc);
+                
+                const mrcGrowthData = this.evaluateTrendRules(data.card1_mrcGrowthPercent);
+                this.card1_isZero = mrcGrowthData.isZero;
+                this.card1_trendIcon = mrcGrowthData.icon;
+                this.card1_trendClass = mrcGrowthData.cssClass;
+                this.card1_percentageGrowth = mrcGrowthData.displayPercent;
+
+                // ==========================================
+                // PROCESS CARD 2 (MRC Growth / Volume Growth)
+                // ==========================================
+                // Main Value: The MRC Growth explicitly displayed as the large value
+                const card2MainPrefix = data.card2_mrcGrowthPercent > 0 ? '+' : '';
+                this.card2_MainValue = `${card2MainPrefix}${data.card2_mrcGrowthPercent}%`;
+
+                // Trend Value: The Percentage increase/decrease in actual Approval records
+                const countGrowthData = this.evaluateTrendRules(data.card2_countGrowthPercent);
+                this.card2_isZero = countGrowthData.isZero;
+                this.card2_trendIcon = countGrowthData.icon;
+                this.card2_trendClass = countGrowthData.cssClass;
+                this.card2_percentageGrowth = countGrowthData.displayPercent;
+
+                this.globalError = false;
             } catch (err) {
-                console.error('Card 1 breakdown caught:', err);
-                this.TotalApprovalcardError = true;
+                console.error('Data Unpacking Error:', err);
+                this.globalError = true;
             }
 
-            // --- TRY CARD 2: APPROVAL GROWTH % (Filter-Responsive) ---
-            try {
-                if (data.currentGrowthRate !== undefined) {
-                    this.card2Value = `${data.currentGrowthRate}%`;
-                     this.lastPeriod = data.timeframe;
-                    const currentRate = data.currentGrowthRate;
-                    const previousRate = data.previousGrowthRate || 0;
-                    
-                    if (previousRate !== 0) {
-                        const trendCalculation = ((currentRate - previousRate) / previousRate) * 100;
-                        this.card2Trend = `${Math.abs(trendCalculation).toFixed(1)}%`;
-                    } else {
-                        this.card2Trend = '0.0%';
-                    }
-                    this.ApprovalGrowthcardError = false;
-                } else {
-                    throw new Error('Missing card 2 payload');
-                }
-            } catch (err) {
-                console.error('Card 2 breakdown caught:', err);
-                this.ApprovalGrowthcardError = true;
-            }
-
-
-            // --- TRY CARD 3 Provisioninig Completed (Filter-Responsive) ---
-            try {
-                if (data.provisionedCompletedCount !== undefined) {
-                // Assigning values to the tracked properties for card 3
-                    this.provisioningCompletedValue = data.provisionedCompletedCount;
-                    this.ProvisioningCompletedMRC = this.formatToMillions(data.ProvisionedCompletedMRC);
-                    this.lastPeriod = data.timeframe;
-
-                    const ProvisionedCompletedPercentageCurrent = data.ProvisionedCompletedPercentageCurrent;
-                    const ProvisionedCompletedPercentagePrevious = data.ProvisionedCompletedPercentagePrevious;
-                    const ProvisionedCompletedMRCPercentageCurrent = data.ProvisionedCompletedMRCPercentageCurrent;
-                    const ProvisionedCompletedMRCPercentagePrevious = data.ProvisionedCompletedMRCPercentagePrevious;
-                    if (ProvisionedCompletedPercentagePrevious !== 0) {
-                        const trendProvisioningCalculation = ((ProvisionedCompletedPercentageCurrent - ProvisionedCompletedPercentagePrevious) / ProvisionedCompletedPercentagePrevious) * 100;
-                        this.provisioningTrend = `${Math.abs(trendProvisioningCalculation).toFixed(1)}%`;
-                        const trendMRCCalculation = ((ProvisionedCompletedMRCPercentageCurrent - ProvisionedCompletedMRCPercentagePrevious) / ProvisionedCompletedMRCPercentagePrevious) * 100;
-                        this.netMrcTrend = `${Math.abs(trendMRCCalculation).toFixed(1)}%`;
-                    } else {
-                        this.provisioningTrend = '0.0%';
-                        this.netMrcTrend = '0.0%';
-                    }
-                    this.ProvisioningCompletedcard3Error = false;
-
-                } else {
-                    throw new Error('Missing card 3 payload');
-                }
-            } catch (err) {
-                console.error('Card 3 breakdown caught:', err);
-                this.ProvisioningCompletedcard3Error = true;
-            }
-
-
-            // --- TRY CARD 4 Provisioninig Completed Growth (Filter-Responsive) ---
-            try {
-                if (data.ProvisioningCompletedGrowthPercent !== undefined) {
-                    const ProvisioningCompletedGrowthCurrent = data.ProvisioningCompletedGrowthCurrent;
-                    const ProvisioningCompletedGrowthPrevious = data.ProvisioningCompletedGrowthPrevious || 0;
-                    // Formatting the value
-                    this.ProvisioningCompletedGrowthPercent = `${data.ProvisioningCompletedGrowthPercent.toFixed(1)}%`;
-                    const ProvisioningCompletedGrowthTrend = ((ProvisioningCompletedGrowthCurrent - ProvisioningCompletedGrowthPrevious) / ProvisioningCompletedGrowthPrevious) * 100;
-                    // Formatting the trend
-                    this.ProvisioningCompletedGrowthTrend = `${Math.abs(ProvisioningCompletedGrowthTrend).toFixed(1)}%`;
-                    
-                    this.ProvisioningCompletedGrowthcard4Error = false;
-                } else {
-                    throw new Error('Missing card 4 payload');
-                }
-            } catch (err) {
-                console.error('Card 4 breakdown caught:', err);
-                this.ProvisioningCompletedGrowthcard4Error = true;
-            }
-
-
-              // --- TRY CARD 5 Provisioning Backlogs % ---
-            try {
-                if (data.ProvisioningInProgress !== undefined) {
-                    // Assigning values to the tracked properties for card 5
-                    this.provisioningInProgress = data.ProvisioningInProgress;
-                    this.totalAmount = data.totalAmount;
-                    this.lastPeriod = data.timeframe;
-
-                    // FIX: Use data.ProvisioningInProgress and data.totalAmount (or use the "this." equivalents)
-                    // Also added a safety check to avoid division by zero or NaN if totalAmount is 0 or missing
-                    if (data.totalAmount && data.totalAmount !== 0) {
-                        const ProvisioningBacklogsPercent = (data.ProvisioningInProgress / data.totalAmount) * 100;
-                        
-                        if (ProvisioningBacklogsPercent !== 0) {
-                            this.ProvisioningBacklogsPercent = ProvisioningBacklogsPercent.toFixed(1) + '%';
-                        } else {
-                            this.ProvisioningBacklogsPercent = '0.0%';
-                        }
-                    } else {
-                        this.ProvisioningBacklogsPercent = '0.0%';
-                    }
-                    
-                    this.ProvisioningBacklogscard5Error = false;
-
-                } else {
-                    throw new Error('Missing card 5 payload');
-                }
-            } catch (err) {
-                console.error('Card 5 breakdown caught:', err);
-                this.ProvisioningBacklogscard5Error = true;
-            }
-
-
-            // --- TRY CARD 6 Provisioning Backlogs MRC ---
-            try {
-                if (data.totalMRC_of_WIPServicesWithProvisioningApproval !== undefined) {
-                    this.totalMRC_of_WIPServicesWithProvisioningApproval = this.formatToMillions(data.totalMRC_of_WIPServicesWithProvisioningApproval);
-                    const ProvisioningBacklogsPercent = (data.ProvisioningInProgress / data.totalAmount) * 100;
-                     if (ProvisioningBacklogsPercent !== 0) {
-                            this.ProvisioningBacklogsPercent = ProvisioningBacklogsPercent.toFixed(1) + '%';
-                        } else {
-                            this.ProvisioningBacklogsPercent = '0.0%';
-                        }
-                    this.lastPeriod = data.timeframe;
-                     this.ProvisioningBacklogscard6Error = false;
-                } else {
-                    throw new Error('Missing card 6 payload');
-                }
-            } catch (err) {
-                console.error('Card 6 breakdown caught:', err);
-                this.ProvisioningBacklogscard6Error = true;
-            }
-
-            // --- TRY CHART: MONTHLY TREND ANALYSIS (Static Jan-Jul Timeline, Filter Independent) ---
-            try {
-                if (data.monthlyMrcValues && data.monthlyMrcValues.length > 0) {
-                    const xPositions = [80, 140, 200, 260, 320, 380, 440, 500, 560, 620, 680, 740]; 
-                    
-                    const calculatedPoints = data.monthlyMrcValues.map((val, index) => {
-                        const baseValue = val - 1200000; 
-                        const pixelHeightRange = 150; 
-                        const valueRange = 2000000; 
-                        
-                        let computedY = 190 - ((baseValue / valueRange) * pixelHeightRange);
-                        
-                        if (computedY < 40) computedY = 40;
-                        if (computedY > 190) computedY = 190;
-
-                        return {
-                            month: index,
-                            x: xPositions[index],
-                            y: computedY
-                        };
-                    });
-
-                    this.chartDataPoints = calculatedPoints;
-                    
-                    this.chartPathData = calculatedPoints.reduce((path, pt, i) => {
-                        return i === 0 
-                            ? `M ${pt.x} ${pt.y}` 
-                            : `${path} Q ${(pt.x + calculatedPoints[i-1].x) / 2} ${calculatedPoints[i-1].y}, ${pt.x} ${pt.y}`;
-                    }, '');
-                    
-                    this.chartError = false;
-                } else {
-                    throw new Error('Empty chart array profile supplied');
-                }
-            } catch (err) {
-                console.error('Chart visualization plotting caught:', err);
-                this.chartError = true; 
-            }
 
         } else if (error) {
-            this.TotalApprovalcardError = true;
-            this.ApprovalGrowthcardError = true;
-            this.ProvisioningCompletedcard3Error = true;
-             this.ProvisioningCompletedGrowthcard4Error = true;
-            this.ProvisioningBacklogscard5Error = true;
-            this.ProvisioningBacklogscard6Error = true;
-            this.chartError = true;
-            console.error('Apex connection level failure:', error);
+            console.error('Wired aggregate channel failure:', error);
+            this.globalError = true;
         }
     }
 
 
-    // Event handler for filter selection changes
+    @wire(getCard3ProductMetrics, { 
+        timePeriod: '$selectedFilter', 
+        startRange: '$startDate', 
+        endRange: '$endDate' 
+    })
+    wiredCard3Metrics({ error, data }) {
+        if (data && data.status === 'Success') {
+            try {
+                // Shared timeframe label
+                this.timeframeText = data.timeframeText;
+
+                // --- TOP SECTION: Service Count ---
+                this.provisioningCompletedValue = data.card3_currentCount.toLocaleString();
+                
+                const countTrendParams = this.evaluateTrendRules(data.card3_countGrowthPercent);
+                this.card3_countIsZero = countTrendParams.isZero;
+                this.card3_countTrendIcon = countTrendParams.icon;
+                this.card3_countTrendClass = countTrendParams.cssClass;
+                this.provisioningTrend = countTrendParams.displayPercent;
+
+                // --- BOTTOM SECTION: Cumulative MRC & Double Trend ---
+                // Format total actual MRC dynamically (K or M)
+                this.ProvisioningCompletedMRC = this.formatCurrencyDynamic(data.card3_currentMrc);
+
+                // Format the Net Difference (Increase/Decrease Amount)
+                const differencePrefix = data.card3_mrcNetDifference >= 0 ? '+' : '-';
+                this.netMrcTrend = `${differencePrefix}${this.formatCurrencyDynamic(Math.abs(data.card3_mrcNetDifference))} / `;
+
+                // Format the Percentage Growth for MRC
+                const mrcTrendParams = this.evaluateTrendRules(data.card3_mrcGrowthPercent);
+                this.card3_mrcIsZero = mrcTrendParams.isZero;
+                this.card3_mrcTrendIcon = mrcTrendParams.icon;
+                this.card3_mrcTrendClass = mrcTrendParams.cssClass;
+                this.percentageMrcTrend = mrcTrendParams.displayPercent;
+
+                this.ProvisioningCompletedcard3Error = false;
+            } catch (err) {
+                console.error('Card 3 Data mapping failed:', err);
+                this.ProvisioningCompletedcard3Error = true;
+            }
+        } else if (error) {
+            console.error('Card 3 Wire Error:', error);
+            this.ProvisioningCompletedcard3Error = true;
+        }
+    }
+
     handleFilterChange(event) {
         this.selectedFilter = event.detail.value;
         this.isCustomDate = (this.selectedFilter === 'custom');
@@ -283,14 +165,50 @@ export default class ProvisioningDashboard extends LightningElement {
         }
     }
 
-    // Event handlers for custom date range inputs
     handleStartDateChange(event) { this.startDate = event.detail.value; }
     handleEndDateChange(event) { this.endDate = event.detail.value; }
 
+    // ==========================================
+    // UTILITY FUNCTIONS
+    // ==========================================
+    
+    // Formats numbers into K (thousands) or M (millions)
+    formatCurrencyDynamic(value) {
+        if (!value || value === 0) return '$0K';
+        const absValue = Math.abs(value);
+        
+        if (absValue >= 1000000) {
+            const millions = (value / 1000000).toFixed(1);
+            return `$${millions.replace('.0', '')}M`;
+        } else {
+            const thousands = Math.round(value / 1000);
+            return `$${thousands.toLocaleString()}K`;
+        }
+    }
 
-    // Utility function to format numbers into millions with two decimal places
-    formatToMillions(value) {
-        if (!value) return '$0.00';
-        return `$${(value / 1000000).toFixed(2)}M`;
+    // Reusable logic engine to assign correct UI state based on growth values
+    evaluateTrendRules(growthValue) {
+        if (growthValue > 0) {
+            return {
+                isZero: false,
+                icon: '▲',
+                cssClass: 'trend-green',
+                displayPercent: `${Math.abs(growthValue).toFixed(1)}%`
+            };
+        } else if (growthValue < 0) {
+            return {
+                isZero: false,
+                icon: '▼',
+                cssClass: 'trend-red',
+                displayPercent: `${Math.abs(growthValue).toFixed(1)}%`
+            };
+        } else {
+            return {
+                isZero: true,
+                icon: '',
+                cssClass: 'trend-neutral',
+                displayPercent: '0%'
+            };
+        }
     }
 }

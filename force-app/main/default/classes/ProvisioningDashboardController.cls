@@ -1,305 +1,229 @@
 public with sharing class ProvisioningDashboardController {
-    
-    public ProvisioningDashboardController() {
-        // Constructor
-    }
 
     @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getApprovalMetrics(String timePeriod, String startRange, String endRange) {
+    public static Map<String, Object> getProvisioningMetrics(String timePeriod, String startRange, String endRange) {
         Map<String, Object> result = new Map<String, Object>();
         
         try {
-            System.debug('Selected Filter from UI: ' + timePeriod);
-            System.debug('Custom Date Bounds: ' + startRange + ' to ' + endRange);
+            // ==========================================
+            // GLOBAL DATE BOUNDARIES
+            // Evaluates dynamic date filters for all cards
+            // ==========================================
+            Map<String, Date> dateBounds = calculateDateBounds(timePeriod, startRange, endRange);
+            Date currentStart = dateBounds.get('currentStart');
+            Date currentEnd = dateBounds.get('currentEnd');
+            Date priorStart = dateBounds.get('priorStart');
+            Date priorEnd = dateBounds.get('priorEnd');
+
+            // ==========================================
+            // CURRENT PERIOD AGGREGATION
+            // Gets SUM of MRC (Card 1 Main) & COUNT of Approvals (Card 2 Trend)
+            // ==========================================
+            AggregateResult[] currentAgg = [
+                SELECT SUM(Computed_MRC__c) totalMrc, COUNT(Id) totalApprovals
+                FROM Opportunity
+                WHERE Provisioningapprovalstatus__c = 'completed'
+                  AND Provisioning_Approval_Date__c >= :currentStart
+                  AND Provisioning_Approval_Date__c <= :currentEnd
+            ];
             
-            Decimal totalAmount = 0; //Total MRC amount of all services with provisioning approval within the selected time period
-            Decimal percentageGrowth = 0;
-            Decimal currentGrowthRate = 0;
-            Decimal previousGrowthRate = 0;
-            String timeframe = '';
+            Decimal currentMrc = currentAgg.isEmpty() || currentAgg[0].get('totalMrc') == null ? 0.0 : (Decimal) currentAgg[0].get('totalMrc');
+            Decimal currentCount = currentAgg.isEmpty() || currentAgg[0].get('totalApprovals') == null ? 0.0 : (Decimal) currentAgg[0].get('totalApprovals');
 
-            //Work in Progress Metrics
-            decimal countWIPServicesWithProvisioningApproval = 0; //Number of services with provisioning approval, but still in progress
-
-            decimal totalMRC_of_WIPServicesWithProvisioningApproval = 0; //Total MRC amount of all services with provisioning approval, but still in progress
-            //End of Work in Progress Metrics
-
-            //Variable values for Card 3 : Provisioning Completed 
-            decimal provisionedCompletedCount = 0; //how many provisioning completed within the selected time period
-            decimal ProvisionedCompletedPercentageCurrent = 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100 within the selected time period
-            decimal ProvisionedCompletedPercentagePrevious = 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100 within the previous time period
-            decimal ProvisionedCompletedMRC = 0; // This is MRC value of all the provisioned completed within the selected time period
-            decimal ProvisionedCompletedMRCPercentageCurrent = 0; // This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the selected time period
-            decimal ProvisionedCompletedMRCPercentagePrevious = 0;// This is calculated by ( ProvisionedCompletedMRC / TotalMRCAmount) * 100 within the previous time period                                                                                                                                                                                                                                                                                                       
-            //Variable for Card 4 : Provisioning Completed Growth
-            // This is calculated by ( ProvisionedCompletedCount / TotalAmount) * 100 
-            Decimal ProvisioningCompletedGrowthPercent= 0; // This is calculated by ( ProvisionedCompleted / TotalAmount) * 100
-            Decimal ProvisioningCompletedGrowthCurrent = 0; // 
-            Decimal ProvisioningCompletedGrowthPrevious = 0; // 
-            //Decimal ProvisioningCompletedGrowthTrend = 0;
-
-            //Variable for Card 5 : Provisioning Backlogs Percent 
-            Decimal ProvisioningBacklogsPercent = 0; // This is calculated by ( ProvisionInProgress / TotalAmount) * 100
-            Decimal ProvisioningInProgress = 0; // This is calculated by ( ProvisionInProgress / TotalAmount) * 100 within the selected time period
-
-            //Varieable for Card 6 : Provisioning Backlogs MRC
-            Decimal ProvisioningBacklogsMRC = 0; // This is calculated by ( Taking all the sum of MRC of all services with provisioning approval, but still in progress)
+            // ==========================================
+            // PRIOR PERIOD AGGREGATION
+            // Gets historical data to calculate the percentage growths
+            // ==========================================
+            Decimal priorMrc = 0.0;
+            Decimal priorCount = 0.0;
             
-
-
-            switch on timePeriod {
-                                
-                when 'this_week' {
-                    timeframe = 'Vs Last Week';
-
-                    // Sample data for this week card 1
-                    totalAmount = 850000;
-                    percentageGrowth = 4.2;
-
-                    // Sample data for this week card 2
-                    currentGrowthRate = 8.0;
-                    previousGrowthRate = 10.5;
-
-                    // Sample data for this week card 3
-                    provisionedCompletedCount = 120; 
-                    ProvisionedCompletedPercentageCurrent = 15.0;
-                    ProvisionedCompletedPercentagePrevious = 12.0;
-                    ProvisionedCompletedMRC = 180000;
-                    ProvisionedCompletedMRCPercentageCurrent = 12.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 10.0;
-
-                    // Sample data for this week card 4
-                    ProvisioningCompletedGrowthPercent = 12.0;
-                    provisioningCompletedGrowthCurrent = 15.0;
-                    ProvisioningCompletedGrowthPrevious = 12.0;
-                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0
-
-                    // Sample data for this week card 5
-                   // ProvisioningBacklogsPercent = 10.0;
-                    ProvisioningInProgress = 15000;
-
-                    // Sample data for this week card 6
-                    totalMRC_of_WIPServicesWithProvisioningApproval = 10000;
-
-                }
-
-                when 'this_month' {
-                    timeframe = 'Vs Last Month';
-
-                    // Sample data for this month Card 1
-                    totalAmount = 4820000; 
-                    percentageGrowth = 12.4;
-
-                    // Sample data for this month Card 2
-                    currentGrowthRate = 12.0;
-                    previousGrowthRate = 11.628;
-
-                    // Sample data for this month Card 3
-                    provisionedCompletedCount = 450;
-                    ProvisionedCompletedPercentageCurrent = 18.0;
-                    ProvisionedCompletedPercentagePrevious = 15.0;
-                    ProvisionedCompletedMRC = 720000;
-                    ProvisionedCompletedMRCPercentageCurrent = 15.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 10.0;   
-
-                    // Sample data for this month Card 4
-                    ProvisioningCompletedGrowthPercent = 17.0;  
-                    provisioningCompletedGrowthCurrent = 18.0;
-                    ProvisioningCompletedGrowthPrevious = 15.0;
-                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0
-
-                    // Sample data for this month Card 5
-                   // ProvisioningBacklogsPercent = 10.0;
-                    ProvisioningInProgress = 28000;
-
-                    // Sample data for this month Card 6
-                    totalMRC_of_WIPServicesWithProvisioningApproval = 25000;
-                    
-                }
-
-                when 'this_quarter' {
-                    timeframe = 'Vs Last Quarter';
-
-                    // Sample data for this quarter Card 1
-                    totalAmount = 14200000;
-                    percentageGrowth = 18.1;
-
-                    // Sample data for this quarter Card 2
-                    currentGrowthRate = 14.5;
-                    previousGrowthRate = -12.2;
-
-                    // Sample data for this quarter Card 3
-                    provisionedCompletedCount = 1200;
-                    ProvisionedCompletedPercentageCurrent = 20.0;
-                    ProvisionedCompletedPercentagePrevious = 18.0;
-                    ProvisionedCompletedMRC = 2160000;
-                    ProvisionedCompletedMRCPercentageCurrent = 18.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 10.0;
-
-                    // Sample data for this quarter Card 4
-                    ProvisioningCompletedGrowthPercent = 21.0;      
-                    provisioningCompletedGrowthCurrent = 29.0;
-                    ProvisioningCompletedGrowthPrevious = 18.0;
-                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0   
-                    
-    
-                    // Sample data for this month Card 5
-                   // ProvisioningBacklogsPercent = 10.0;
-                    ProvisioningInProgress = 45000;
-
-                    // Sample data for this month Card 6
-                    totalMRC_of_WIPServicesWithProvisioningApproval = 50000;
-
-                }
-
-                when 'ytd' {
-                    timeframe = 'Vs Last YearToDate';
-
-                    // Sample data for YTD Card 1
-                    totalAmount = 45800000;
-                    percentageGrowth = 24.7;
-                   
-                    // Sample data for YTD Card 2
-                    currentGrowthRate = 19.2;
-                    previousGrowthRate = 15.0;
-                   
-                    // Sample data for YTD Card 3
-                    provisionedCompletedCount = 3500;
-                    ProvisionedCompletedPercentageCurrent = 22.0;
-                    ProvisionedCompletedPercentagePrevious = 20.0;
-                    ProvisionedCompletedMRC = 6300000;
-                    ProvisionedCompletedMRCPercentageCurrent = 20.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 5.0;
-
-                    // Sample data for YTD Card 4
-                    ProvisioningCompletedGrowthPercent = 29.0;  
-                    provisioningCompletedGrowthCurrent = 22.0;
-                    ProvisioningCompletedGrowthPrevious = 5.0;
-                    // ProvisioningCompletedGrowthTrend = 25.0; // Example: 25.0 
-                    
-                    // Sample data for this month Card 5
-                   // ProvisioningBacklogsPercent = 10.0;
-                    ProvisioningInProgress = 70000;
-                    // Sample data for this month Card 6
-                    totalMRC_of_WIPServicesWithProvisioningApproval = 50000;    
-                }
-                when 'custom' {
-
-                    // Sample data for custom range Card 1
-                    totalAmount = 2350000;
-                    percentageGrowth = 9.3;
-
-                    // Sample data for custom range Card 2
-                    currentGrowthRate = 10.5;
-                    previousGrowthRate = 9.8;
-
-                    // Sample data for custom range Card 3  
-                    provisionedCompletedCount = 2500;
-                    ProvisionedCompletedPercentageCurrent = 18.0;
-                    ProvisionedCompletedPercentagePrevious = 15.0;
-                    ProvisionedCompletedMRC = 4500000;
-                    ProvisionedCompletedMRCPercentageCurrent = 15.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 10.0;
-
-                    // Sample data for custom range Card 4
-                    ProvisioningCompletedGrowthPercent = 10.0;
-                    provisioningCompletedGrowthCurrent = 11.0;
-                    ProvisioningCompletedGrowthPrevious = 15.0;
-
-                    // Sample data for this month Card 5
-                   // ProvisioningBacklogsPercent = 10.0;
-                    ProvisioningInProgress = 80000;
-
-                    // Sample data for this month Card 6
-                    totalMRC_of_WIPServicesWithProvisioningApproval = 60000;    
-                    
-                }
-                when else {
-                    // Default case for 'all_time' or any other unspecified time period
-                    timeframe = 'All Time';
-
-                    // Sample data for all time Card 1
-                    totalAmount = 4820000;
-                    percentageGrowth = 12.4;
-                    // Sample data for all time Card 2
-                    currentGrowthRate = 12.0;
-                    previousGrowthRate = 11.628;
-
-                    // Sample data for all time Card 3
-                    provisionedCompletedCount = 450;
-                    ProvisionedCompletedPercentageCurrent = 18.0;
-                    ProvisionedCompletedPercentagePrevious = 15.0;
-                    ProvisionedCompletedMRC = 720000;
-                    ProvisionedCompletedMRCPercentageCurrent = 15.0;
-                    ProvisionedCompletedMRCPercentagePrevious = 10.0;
-
-                    // Sample data for all time Card 4
-                    ProvisioningCompletedGrowthPercent = 18.0;  
-                    provisioningCompletedGrowthCurrent = 13.0;
-                    ProvisioningCompletedGrowthPrevious = 5.0;
-
-                    // Sample data for this month Card 5
-                   // ProvisioningBacklogsPercent = 10.0;
-                    ProvisioningInProgress = 45000;
-
-                    // Sample data for this month Card 6
-                    totalMRC_of_WIPServicesWithProvisioningApproval = 50000;
-                }
-
+            if (priorStart != null && priorEnd != null) {
+                AggregateResult[] priorAgg = [
+                    SELECT SUM(Computed_MRC__c) totalMrc, COUNT(Id) totalApprovals
+                    FROM Opportunity
+                    WHERE Provisioningapprovalstatus__c = 'completed'
+                      AND Provisioning_Approval_Date__c >= :priorStart
+                      AND Provisioning_Approval_Date__c <= :priorEnd
+                ];
+                priorMrc = priorAgg.isEmpty() || priorAgg[0].get('totalMrc') == null ? 0.0 : (Decimal) priorAgg[0].get('totalMrc');
+                priorCount = priorAgg.isEmpty() || priorAgg[0].get('totalApprovals') == null ? 0.0 : (Decimal) priorAgg[0].get('totalApprovals');
             }
 
-             // ==================== ADDED THIS BLOCK FOR THE CHART ====================
-            List<Decimal> monthlyMrcValues = new List<Decimal>();
-            // Scale points corresponding to values between $1.8M and $3.2M from your image
-            monthlyMrcValues.add(1850000);  // Jan 2026
-            monthlyMrcValues.add(2100000);  // Feb 2026
-            monthlyMrcValues.add(2500000);  // Mar 2026
-            monthlyMrcValues.add(2350000);  // Apr 2026
-            monthlyMrcValues.add(2900000);  // May 2026
-            monthlyMrcValues.add(3200000);  // Jun 2026
-            monthlyMrcValues.add(1200000);  // Jul 2026 (Lowest value because it's only July 2nd)
-            // // =========================================================================
-
-            // Add the monthly MRC values to the result map
-            result.put('monthlyMrcValues', monthlyMrcValues);
-           
-            // Add the other metrics to the result map
-            //Add metrics for card 1(Total Amount Provisioned))
-            result.put('totalAmount', totalAmount);
-            result.put('percentageGrowth', percentageGrowth);
-
-            //Add metrics for card 2 (Approval Growth Rate)
-            result.put('currentGrowthRate', currentGrowthRate);
-            result.put('previousGrowthRate', previousGrowthRate);
+            // ==========================================
+            // PERCENTAGE GROWTH CALCULATIONS
+            // Formula: ((Current - Prior) / Prior) * 100
+            // ==========================================
             
-            //Add metrics for card 3 (Provisioning Completed)
-            result.put('provisionedCompletedCount', provisionedCompletedCount);
-            result.put('ProvisionedCompletedPercentageCurrent', ProvisionedCompletedPercentageCurrent);
-            result.put('ProvisionedCompletedPercentagePrevious', ProvisionedCompletedPercentagePrevious);
-            result.put('ProvisionedCompletedMRC', ProvisionedCompletedMRC);
-            result.put('ProvisionedCompletedMRCPercentageCurrent', ProvisionedCompletedMRCPercentageCurrent);
-            result.put('ProvisionedCompletedMRCPercentagePrevious', ProvisionedCompletedMRCPercentagePrevious);
-            result.put('timeframe', timeframe);
-
-            //Add metrics for card 4 (Provisioning Completed Growth)
-            result.put('ProvisioningCompletedGrowthPercent', ProvisioningCompletedGrowthPercent);
-            result.put('provisioningCompletedGrowthCurrent', provisioningCompletedGrowthCurrent);   
-            result.put('ProvisioningCompletedGrowthPrevious', ProvisioningCompletedGrowthPrevious);
-
-            //Add metrics for card 5 (Provisioning Backlogs)
-            result.put('ProvisioningBacklogsPercent', ProvisioningBacklogsPercent);
-            result.put('ProvisioningInProgress', ProvisioningInProgress);
-
-            //Add metrics for card 6 (Provisioning Backlogs MRC)
-            result.put('totalMRC_of_WIPServicesWithProvisioningApproval', totalMRC_of_WIPServicesWithProvisioningApproval);
-
+            // 1. Net MRC Growth (Affects: Card 1 Trend & Card 2 Main Value)
+            Decimal mrcGrowthPercent = calculatePercentageGrowth(currentMrc, priorMrc);
             
+            // 2. Approval Volume Growth (Affects: Card 2 Trend)
+            Decimal countGrowthPercent = calculatePercentageGrowth(currentCount, priorCount);
+
+            // ==========================================
+            // PAYLOAD CONSTRUCTION
+            // Sending mapped data back to the JavaScript
+            // ==========================================
+            
+            // CARD 1 Payloads
+            result.put('card1_currentMrc', currentMrc);
+            result.put('card1_mrcGrowthPercent', mrcGrowthPercent.setScale(1));
+            
+            // CARD 2 Payloads
+            result.put('card2_mrcGrowthPercent', mrcGrowthPercent.setScale(1)); // Duplicated key for logic clarity in JS
+            result.put('card2_countGrowthPercent', countGrowthPercent.setScale(1));
+            
+            // Shared Context
+            result.put('timeframeText', getPeriodLabel(timePeriod));
             result.put('status', 'Success');
-            
+
         } catch (Exception e) {
-            throw new AuraHandledException('Error retrieving dashboard metrics: ' + e.getMessage());
+            throw new AuraHandledException('Error executing dynamic dashboard metric load: ' + e.getMessage());
         }
         
         return result;
+    }
+
+
+    // =========================================================================
+    // CARD 3 DATA RETRIEVAL: Customer Products (Provisioning Completed & Net MRC)
+    // =========================================================================
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getCard3ProductMetrics(String timePeriod, String startRange, String endRange) {
+        Map<String, Object> result = new Map<String, Object>();
+        
+        try {
+            // 1. Fetch exact date boundaries using the shared helper method
+            Map<String, Date> dateBounds = calculateDateBounds(timePeriod, startRange, endRange);
+            Date currentStart = dateBounds.get('currentStart');
+            Date currentEnd = dateBounds.get('currentEnd');
+            Date priorStart = dateBounds.get('priorStart');
+            Date priorEnd = dateBounds.get('priorEnd');
+
+            // 2. CURRENT PERIOD QUERY: Customer_Products__c
+            // Gets total count of active services and sum of MRC
+            AggregateResult[] currentAgg = [
+                SELECT COUNT(Id) totalProvisioned, SUM(MRC__c) totalMrc
+                FROM Customer_Products__c
+                WHERE Status__c = 'active'
+                  AND Billing_Start_Date__c >= :currentStart  // UPDATE THIS to your actual date field API name
+                  AND Billing_Start_Date__c <= :currentEnd
+            ];
+            
+            Decimal currentCount = currentAgg.isEmpty() || currentAgg[0].get('totalProvisioned') == null ? 0.0 : (Decimal) currentAgg[0].get('totalProvisioned');
+            Decimal currentMrc = currentAgg.isEmpty() || currentAgg[0].get('totalMrc') == null ? 0.0 : (Decimal) currentAgg[0].get('totalMrc');
+
+            // 3. PRIOR PERIOD QUERY: Customer_Products__c
+            Decimal priorCount = 0.0;
+            Decimal priorMrc = 0.0;
+            
+            if (priorStart != null && priorEnd != null) {
+                AggregateResult[] priorAgg = [
+                    SELECT COUNT(Id) totalProvisioned, SUM(MRC__c) totalMrc
+                    FROM Customer_Products__c
+                    WHERE Status__c = 'active'
+                      AND Billing_Start_Date__c >= :priorStart
+                      AND Billing_Start_Date__c <= :priorEnd
+                ];
+                priorCount = priorAgg.isEmpty() || priorAgg[0].get('totalProvisioned') == null ? 0.0 : (Decimal) priorAgg[0].get('totalProvisioned');
+                priorMrc = priorAgg.isEmpty() || priorAgg[0].get('totalMrc') == null ? 0.0 : (Decimal) priorAgg[0].get('totalMrc');
+            }
+
+            // 4. CALCULATE GROWTH METRICS FOR CARD 3
+            // Top Section: Count of services
+            Decimal countGrowthPercent = calculatePercentageGrowth(currentCount, priorCount);
+            
+            // Bottom Section: MRC Actual Difference and Percentage
+            Decimal mrcNetDifference = currentMrc - priorMrc; // Actual amount increase/decrease
+            Decimal mrcGrowthPercent = calculatePercentageGrowth(currentMrc, priorMrc);
+
+            // 5. MAP RESULTS TO UNIQUE CARD 3 KEYS
+            result.put('card3_currentCount', currentCount);
+            result.put('card3_countGrowthPercent', countGrowthPercent.setScale(1));
+            
+            result.put('card3_currentMrc', currentMrc);
+            result.put('card3_mrcNetDifference', mrcNetDifference);
+            result.put('card3_mrcGrowthPercent', mrcGrowthPercent.setScale(1));
+            
+            result.put('timeframeText', getPeriodLabel(timePeriod));
+            result.put('status', 'Success');
+
+        } catch (Exception e) {
+            throw new AuraHandledException('Error loading Card 3 metrics: ' + e.getMessage());
+        }
+        
+        return result;
+    }
+
+
+    // HELPER: Standardized Growth Formula preventing divide-by-zero errors
+    private static Decimal calculatePercentageGrowth(Decimal currentVal, Decimal priorVal) {
+        if (priorVal > 0) {
+            return ((currentVal - priorVal) / priorVal) * 100;
+        } else if (priorVal == 0 && currentVal > 0) {
+            return 100.0; // 100% Growth if starting from a baseline of zero
+        } else {
+            return 0.0; // 0% Growth if both are zero
+        }
+    }
+
+    // HELPER: Dynamic Date Boundary Engine
+    private static Map<String, Date> calculateDateBounds(String timePeriod, String startRange, String endRange) {
+        Map<String, Date> bounds = new Map<String, Date>();
+        Date today = Date.today();
+        Date currentStart, currentEnd, priorStart, priorEnd;
+
+        switch on timePeriod {
+            when 'this_week' {
+                currentStart = today.toStartOfWeek();
+                currentEnd = currentStart.addDays(6);
+                priorStart = currentStart.addDays(-7);
+                priorEnd = currentStart.addDays(-1);
+            }
+            when 'this_month' {
+                currentStart = today.toStartOfMonth();
+                currentEnd = currentStart.addMonths(1).addDays(-1);
+                priorStart = currentStart.addMonths(-1);
+                priorEnd = currentStart.toStartOfMonth().addDays(-1);
+            }
+            when 'this_quarter' {
+                Integer currentQuarter = ((today.month() - 1) / 3) + 1;
+                currentStart = Date.newInstance(today.year(), (currentQuarter * 3) - 2, 1);
+                currentEnd = currentStart.addMonths(3).addDays(-1);
+                priorStart = currentStart.addMonths(-3);
+                priorEnd = currentStart.addDays(-1);
+            }
+            when 'ytd' {
+                currentStart = Date.newInstance(today.year(), 1, 1);
+                currentEnd = today;
+                priorStart = Date.newInstance(today.year() - 1, 1, 1);
+                priorEnd = Date.newInstance(today.year() - 1, today.month(), today.day());
+            }
+            when 'custom' {
+                currentStart = String.isNotBlank(startRange) ? Date.valueOf(startRange) : today;
+                currentEnd = String.isNotBlank(endRange) ? Date.valueOf(endRange) : today;
+                Integer daysSpanned = currentStart.daysBetween(currentEnd) + 1;
+                priorStart = currentStart.addDays(-daysSpanned);
+                priorEnd = currentStart.addDays(-1);
+            }
+            when else {
+                currentStart = today.toStartOfMonth();
+                currentEnd = today;
+            }
+        }
+
+        bounds.put('currentStart', currentStart);
+        bounds.put('currentEnd', currentEnd);
+        bounds.put('priorStart', priorStart);
+        bounds.put('priorEnd', priorEnd);
+        return bounds;
+    }
+
+    private static String getPeriodLabel(String timePeriod) {
+        if (timePeriod == 'this_week') return 'vs Last Week';
+        if (timePeriod == 'this_month') return 'vs Last Month';
+        if (timePeriod == 'this_quarter') return 'vs Last Quarter';
+        if (timePeriod == 'ytd') return 'vs Last YTD';
+        return 'vs Prior Period';
     }
 }
