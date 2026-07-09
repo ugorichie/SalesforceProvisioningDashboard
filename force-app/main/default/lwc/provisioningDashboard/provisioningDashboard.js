@@ -3,6 +3,7 @@ import getProvisioningMetrics from '@salesforce/apex/ProvisioningDashboardContro
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { loadStyle } from 'lightning/platformResourceLoader';
 import getCard3ProductMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard3ProductMetrics';
+import getCard4GrowthMetrics from '@salesforce/apex/ProvisioningDashboardController.getCard4GrowthMetrics';
 
 export default class ProvisioningDashboard extends LightningElement {
     // ==========================================
@@ -52,6 +53,23 @@ export default class ProvisioningDashboard extends LightningElement {
     card3_mrcIsZero = true;
     card3_mrcTrendIcon = '';
     card3_mrcTrendClass = 'trend-neutral';
+
+    // ==========================================
+    // CARD 4 PROPERTIES (Provisioning Completed Growth %)
+    // ==========================================
+    ProvisioningCompletedGrowthcard4Error = false;
+    
+    // Main Value (MRC Percentage Growth)
+    ProvisioningCompletedGrowthPercent = '0.0%';
+    
+    // Sub-Trend Value (Volume/Count Percentage Growth)
+    ProvisioningCompletedGrowthTrend = '0.0%';
+    card4_isZero = true;
+    card4_trendIcon = '';
+    card4_trendClass = 'trend-neutral';
+    // ==========================================
+    // END OF CARD 4 PROPERTIES
+    // ==========================================
 
     filterOptions = [
         { label: 'This Week', value: 'this_week' },
@@ -153,6 +171,45 @@ export default class ProvisioningDashboard extends LightningElement {
         } else if (error) {
             console.error('Card 3 Wire Error:', error);
             this.ProvisioningCompletedcard3Error = true;
+        }
+    }
+
+
+    // ==========================================
+    // CARD 4 WIRE SERVICE (Customer_Products__c Growth)
+    // ==========================================
+    @wire(getCard4GrowthMetrics, { 
+        timePeriod: '$selectedFilter', 
+        startRange: '$startDate', 
+        endRange: '$endDate' 
+    })
+    wiredCard4Metrics({ error, data }) {
+        if (data && data.status === 'Success') {
+            try {
+                // Ensure the global timeframe text is synchronized
+                this.timeframeText = data.timeframeText;
+
+                // --- MAIN VALUE: MRC Growth Percentage ---
+                // Assign a '+' prefix if the growth is positive, otherwise let the '-' show natively
+                const mrcGrowthPrefix = data.card4_mrcGrowthPercent > 0 ? '+' : '';
+                this.ProvisioningCompletedGrowthPercent = `${mrcGrowthPrefix}${data.card4_mrcGrowthPercent}%`;
+
+                // --- SUB-TREND VALUE: Volume/Count Growth Percentage ---
+                // Evaluate colors, icons, and zero-states using the reusable helper method
+                const countTrendParams = this.evaluateTrendRules(data.card4_countGrowthPercent);
+                this.card4_isZero = countTrendParams.isZero;
+                this.card4_trendIcon = countTrendParams.icon;
+                this.card4_trendClass = countTrendParams.cssClass;
+                this.ProvisioningCompletedGrowthTrend = countTrendParams.displayPercent;
+
+                this.ProvisioningCompletedGrowthcard4Error = false;
+            } catch (err) {
+                console.error('Card 4 Data mapping failed:', err);
+                this.ProvisioningCompletedGrowthcard4Error = true;
+            }
+        } else if (error) {
+            console.error('Card 4 Wire Error:', error);
+            this.ProvisioningCompletedGrowthcard4Error = true;
         }
     }
 

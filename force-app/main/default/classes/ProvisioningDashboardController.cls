@@ -156,6 +156,72 @@ public with sharing class ProvisioningDashboardController {
     }
 
 
+    // =========================================================================
+    // CARD 4 DATA RETRIEVAL: Customer Products (Provisioning Completed Growth %)
+    // =========================================================================
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getCard4GrowthMetrics(String timePeriod, String startRange, String endRange) {
+        Map<String, Object> result = new Map<String, Object>();
+        
+        try {
+            // 1. Fetch exact date boundaries using the shared helper method
+            Map<String, Date> dateBounds = calculateDateBounds(timePeriod, startRange, endRange);
+            Date currentStart = dateBounds.get('currentStart');
+            Date currentEnd = dateBounds.get('currentEnd');
+            Date priorStart = dateBounds.get('priorStart');
+            Date priorEnd = dateBounds.get('priorEnd');
+
+            // 2. CURRENT PERIOD QUERY: Customer_Products__c
+            // Targets 'active' status and filters by Billing_Start_Date__c
+            AggregateResult[] currentAgg = [
+                SELECT SUM(MRC__c) totalMrc, COUNT(Id) totalProvisioned
+                FROM Customer_Products__c
+                WHERE Status__c = 'active'
+                  AND Billing_Start_Date__c >= :currentStart
+                  AND Billing_Start_Date__c <= :currentEnd
+            ];
+            
+            Decimal currentMrc = currentAgg.isEmpty() || currentAgg[0].get('totalMrc') == null ? 0.0 : (Decimal) currentAgg[0].get('totalMrc');
+            Decimal currentCount = currentAgg.isEmpty() || currentAgg[0].get('totalProvisioned') == null ? 0.0 : (Decimal) currentAgg[0].get('totalProvisioned');
+
+            // 3. PRIOR PERIOD QUERY: Customer_Products__c
+            Decimal priorMrc = 0.0;
+            Decimal priorCount = 0.0;
+            
+            if (priorStart != null && priorEnd != null) {
+                AggregateResult[] priorAgg = [
+                    SELECT SUM(MRC__c) totalMrc, COUNT(Id) totalProvisioned
+                    FROM Customer_Products__c
+                    WHERE Status__c = 'active'
+                      AND Billing_Start_Date__c >= :priorStart
+                      AND Billing_Start_Date__c <= :priorEnd
+                ];
+                priorMrc = priorAgg.isEmpty() || priorAgg[0].get('totalMrc') == null ? 0.0 : (Decimal) priorAgg[0].get('totalMrc');
+                priorCount = priorAgg.isEmpty() || priorAgg[0].get('totalProvisioned') == null ? 0.0 : (Decimal) priorAgg[0].get('totalProvisioned');
+            }
+
+            // 4. CALCULATE GROWTH METRICS FOR CARD 4
+            // Main Value: Percentage Growth of Cumulative MRC
+            Decimal mrcGrowthPercent = calculatePercentageGrowth(currentMrc, priorMrc);
+            
+            // Sub-Trend Value: Percentage Growth of Volume (Count of active services)
+            Decimal countGrowthPercent = calculatePercentageGrowth(currentCount, priorCount);
+
+            // 5. MAP RESULTS TO UNIQUE CARD 4 KEYS
+            result.put('card4_mrcGrowthPercent', mrcGrowthPercent.setScale(1));
+            result.put('card4_countGrowthPercent', countGrowthPercent.setScale(1));
+            
+            result.put('timeframeText', getPeriodLabel(timePeriod));
+            result.put('status', 'Success');
+
+        } catch (Exception e) {
+            throw new AuraHandledException('Error loading Card 4 metrics: ' + e.getMessage());
+        }
+        
+        return result;
+    }
+
+
     // HELPER: Standardized Growth Formula preventing divide-by-zero errors
     private static Decimal calculatePercentageGrowth(Decimal currentVal, Decimal priorVal) {
         if (priorVal > 0) {

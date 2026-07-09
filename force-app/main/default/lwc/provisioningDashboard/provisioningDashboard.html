@@ -106,6 +106,30 @@
                 </template>
             </div>
 
+            <div class="dashboard-card-dark">
+                <template if:false={ProvisioningCompletedGrowthcard4Error}>
+
+                    <div class="card-title">Provisioning Completed Growth (%)</div>
+                    <div class="card-subtitle-lbl">&nbsp;</div>
+                    
+                    <div class="card-value">{ProvisioningCompletedGrowthPercent}</div>
+                    
+                    <div class="trend-stack-container">
+                        <div class={card4_trendClass}>
+                            <template if:false={card4_isZero}>
+                                <span class="trend-arrow">{card4_trendIcon}</span>
+                            </template>
+                            <span class="trend-percentage">{ProvisioningCompletedGrowthTrend}</span>
+                        </div>
+                        <div class="trend-period-text">{timeframeText}</div>
+                    </div>
+                </template>
+                
+                <template if:true={ProvisioningCompletedGrowthcard4Error}>
+                    <div class="error-state-dark">Failed to load Provisioning Completed Growth data.</div>
+                </template>
+            </div>
+
         </div>
     </div>
 </template>
